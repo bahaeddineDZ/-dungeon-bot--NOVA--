@@ -5564,6 +5564,4 @@ async def dungeon_stats(ctx):
 
 # -------------------------- تشغيل البوت --------------------------
 
-bot.run(
-    "MTM5ODcyMTUzNTA4MjIzMzk5Ng.G58caN.vUm0Dv1w7qdO9e0is_bI0kEnLA9gv8a2kJ9xII"
-)  # ضع توكن البوت الخاص بك هنا
+bot.run(os.getenv('DISCORD_TOKEN'))
