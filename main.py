@@ -5743,5 +5743,3 @@ if not discord_token:
     print("💡 تأكد من إضافة الرمز المميز في تبويب Secrets")
     exit(1)
 
-print(f"🔑 تم العثور على الرمز المميز: {discord_token[:20]}...")
-bot.run(discord_token)
