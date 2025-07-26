@@ -36,8 +36,13 @@ setup_advanced_help(bot)
 # ====== الأحداث والمهام ======
 
 @bot.event
-async def setup_hook():
-    bot.loop.create_task(tasks_system.run(bot))
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    ctx = await bot.get_context(message)
+    await bot.invoke(ctx)
+
 
 @tasks.loop(seconds=60)
 async def update_farm():
