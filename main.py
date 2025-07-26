@@ -914,11 +914,16 @@ def regenerate_prices():
 @bot.command(name="متجر")
 async def shop(ctx):
     prices = update_prices_if_needed()
+    user_id = str(ctx.author.id)
+    init_user(user_id, ctx.author.display_name)
+    data = load_data()
+    user_balance = data[user_id]["balance"]["دولار"]
+    user_bag = data[user_id].get("حقيبة", [])
 
     if os.path.exists(PRICE_STATE_FILE):
         with open(PRICE_STATE_FILE, "r") as f:
-            data = json.load(f)
-        remaining = PRICE_DURATION - (time.time() - data.get("last_update", 0))
+            data_file = json.load(f)
+        remaining = PRICE_DURATION - (time.time() - data_file.get("last_update", 0))
         minutes = int(max(0, remaining // 60))
         seconds = int(max(0, remaining % 60))
         footer_text = f"⏳ تحديث الأسعار خلال {minutes} دقيقة و {seconds} ثانية."
@@ -930,23 +935,28 @@ async def shop(ctx):
         description=(
             "🌟 **مرحباً بك في السوق العالمي!**\n\n"
             "📈 الأسعار تتغير كل **6 دقائق** حسب العرض والطلب\n"
-            "🛒 اضغط على أي عنصر لاختيار إجراء (شراء / بيع)\n"
+            "🛒 اضغط على أي عنصر لاختيار شراء أو بيع مباشرة!\n"
             "💡 **نصيحة:** راقب المؤشرات لتحصل على أفضل الصفقات!"
         ),
         color=0x2c3e50
+    )
+    embed.add_field(
+        name="💰 رصيدك الحالي",
+        value=f"{user_balance:,} دولار",
+        inline=True
     )
     embed.set_footer(text=footer_text)
 
     class ShopView(View):
         def __init__(self):
-            super().__init__(timeout=60)
+            super().__init__(timeout=120)
             for item in store_items:
                 name = item["name"]
                 base_price = item["price"]
                 current_price = prices.get(name, base_price)
                 indicator = get_price_indicator(base_price, current_price)
                 button = self.make_button(item, current_price, indicator)
-                if button:  # تأكد أن الزر صالح
+                if button:
                     self.add_item(button)
 
         def make_button(self, item, current_price, indicator):
@@ -974,51 +984,213 @@ async def shop(ctx):
             )
 
             async def callback(interaction: Interaction):
-                view = ActionView(item["name"])
-                await interaction.response.send_message(
-                    f"🎯 اختر العملية التي تريد تنفيذها على: **{item['name']}**",
-                    view=view,
-                    ephemeral=True
+                if interaction.user.id != ctx.author.id:
+                    await interaction.response.send_message("❌ هذا المتجر ليس لك!", ephemeral=True)
+                    return
+
+                # فحص ما إذا كان المستخدم يملك هذا العنصر
+                item_count = user_bag.count(item["name"])
+                
+                view = QuickActionView(item["name"], current_price, item_count)
+                embed_item = Embed(
+                    title=f"🛒 {item['name']}",
+                    description=f"💰 السعر الحالي: **{current_price:,}$**\n📦 تملك: **{item_count}** قطعة",
+                    color=0x3498db
                 )
+                await interaction.response.send_message(embed=embed_item, view=view, ephemeral=True)
 
             button.callback = callback
             return button
 
+    class QuickActionView(View):
+        def __init__(self, item_name, item_price, owned_count):
+            super().__init__(timeout=60)
+            self.item_name = item_name
+            self.item_price = item_price
+            self.owned_count = owned_count
 
+        @discord.ui.button(label="🛒 شراء", style=ButtonStyle.success, emoji="💵")
+        async def buy_action(self, interaction: Interaction, button: Button):
+            if interaction.user.id != ctx.author.id:
+                await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
+                return
 
+            # حساب الكميات الممكنة للشراء
+            max_affordable = user_balance // self.item_price
+            
+            if max_affordable == 0:
+                await interaction.response.send_message(
+                    f"❌ لا يمكنك شراء {self.item_name}!\n💰 تحتاج: {self.item_price:,}$ | لديك: {user_balance:,}$",
+                    ephemeral=True
+                )
+                return
 
-    class ActionView(View):
-        def __init__(self, item_name):
-            super().__init__(timeout=20)
+            view = BuyQuantityView(self.item_name, self.item_price, max_affordable)
+            embed = Embed(
+                title=f"🛒 شراء {self.item_name}",
+                description=f"💰 السعر: **{self.item_price:,}$** للقطعة\n💳 رصيدك: **{user_balance:,}$**\n🛒 الحد الأقصى: **{max_affordable:,}** قطعة",
+                color=0x2ecc71
+            )
+            await interaction.response.edit_message(embed=embed, view=view)
 
-            self.add_item(Button(label="🛒 شراء", style=ButtonStyle.success, custom_id=f"buy:{item_name}"))
-            self.add_item(Button(label="💰 بيع", style=ButtonStyle.danger, custom_id=f"sell:{item_name}"))
+        @discord.ui.button(label="💰 بيع", style=ButtonStyle.danger, emoji="🔻")
+        async def sell_action(self, interaction: Interaction, button: Button):
+            if interaction.user.id != ctx.author.id:
+                await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
+                return
 
-        @discord.ui.button(label="شراء", style=ButtonStyle.success)
-        async def buy_button(self, interaction: Interaction, button: Button):
-            ctx_fake = await bot.get_context(interaction.message)
-            ctx_fake.author = interaction.user
-            ctx_fake.channel = interaction.channel
-            ctx_fake.send = interaction.followup.send
-            command = bot.get_command("شراء")
-            if command:
-                await interaction.response.defer(ephemeral=True)
-                await command.callback(ctx_fake)
-            else:
-                await interaction.response.send_message("❌ لم يتم العثور على أمر الشراء.", ephemeral=True)
+            if self.owned_count == 0:
+                await interaction.response.send_message(
+                    f"❌ لا تملك أي {self.item_name} للبيع!",
+                    ephemeral=True
+                )
+                return
 
-        @discord.ui.button(label="بيع", style=ButtonStyle.danger)
-        async def sell_button(self, interaction: Interaction, button: Button):
-            ctx_fake = await bot.get_context(interaction.message)
-            ctx_fake.author = interaction.user
-            ctx_fake.channel = interaction.channel
-            ctx_fake.send = interaction.followup.send
-            command = bot.get_command("بيع")
-            if command:
-                await interaction.response.defer(ephemeral=True)
-                await command.callback(ctx_fake)
-            else:
-                await interaction.response.send_message("❌ لم يتم العثور على أمر البيع.", ephemeral=True)
+            view = SellQuantityView(self.item_name, self.item_price, self.owned_count)
+            embed = Embed(
+                title=f"💰 بيع {self.item_name}",
+                description=f"💰 سعر البيع: **{self.item_price:,}$** للقطعة\n📦 تملك: **{self.owned_count}** قطعة\n💎 القيمة الإجمالية: **{self.item_price * self.owned_count:,}$**",
+                color=0xe67e22
+            )
+            await interaction.response.edit_message(embed=embed, view=view)
+
+    class BuyQuantityView(View):
+        def __init__(self, item_name, item_price, max_quantity):
+            super().__init__(timeout=60)
+            self.item_name = item_name
+            self.item_price = item_price
+            self.max_quantity = max_quantity
+
+        @discord.ui.button(label="1️⃣ قطعة واحدة", style=ButtonStyle.secondary)
+        async def buy_one(self, interaction: Interaction, button: Button):
+            await self.process_buy(interaction, 1)
+
+        @discord.ui.button(label="🔟 عشرة", style=ButtonStyle.primary)
+        async def buy_ten(self, interaction: Interaction, button: Button):
+            quantity = min(10, self.max_quantity)
+            await self.process_buy(interaction, quantity)
+
+        @discord.ui.button(label="💯 مئة", style=ButtonStyle.primary)
+        async def buy_hundred(self, interaction: Interaction, button: Button):
+            quantity = min(100, self.max_quantity)
+            await self.process_buy(interaction, quantity)
+
+        @discord.ui.button(label="🔄 نصف ما أستطيع", style=ButtonStyle.success)
+        async def buy_half_max(self, interaction: Interaction, button: Button):
+            quantity = max(1, self.max_quantity // 2)
+            await self.process_buy(interaction, quantity)
+
+        @discord.ui.button(label="💸 الحد الأقصى", style=ButtonStyle.danger)
+        async def buy_max(self, interaction: Interaction, button: Button):
+            await self.process_buy(interaction, self.max_quantity)
+
+        async def process_buy(self, interaction: Interaction, quantity):
+            if interaction.user.id != ctx.author.id:
+                await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
+                return
+
+            total_cost = self.item_price * quantity
+            
+            # تحديث البيانات
+            data = load_data()
+            user = data[user_id]
+            
+            if user["balance"]["دولار"] < total_cost:
+                await interaction.response.send_message(
+                    f"❌ لا تملك ما يكفي من المال!\nتحتاج: {total_cost:,}$ | لديك: {user['balance']['دولار']:,}$",
+                    ephemeral=True
+                )
+                return
+
+            # تنفيذ الشراء
+            user["balance"]["دولار"] -= total_cost
+            for _ in range(quantity):
+                user.setdefault("حقيبة", []).append(self.item_name)
+            save_data(data)
+
+            # تحديث مهام الشراء
+            completed_tasks = tasks_system.update_task_progress(user_id, "buy_items", quantity)
+            
+            embed = Embed(
+                title="✅ تمت عملية الشراء بنجاح!",
+                description=f"🎉 اشتريت **{quantity:,}** من {self.item_name}",
+                color=0x00ff00
+            )
+            embed.add_field(name="💰 المبلغ المدفوع", value=f"{total_cost:,}$", inline=True)
+            embed.add_field(name="💳 رصيدك الجديد", value=f"{user['balance']['دولار']:,}$", inline=True)
+            
+            if completed_tasks:
+                embed.add_field(name="🎯 مهام مكتملة!", value=f"✅ أكملت {len(completed_tasks)} مهمة!", inline=False)
+
+            await interaction.response.edit_message(embed=embed, view=None)
+
+    class SellQuantityView(View):
+        def __init__(self, item_name, item_price, owned_quantity):
+            super().__init__(timeout=60)
+            self.item_name = item_name
+            self.item_price = item_price
+            self.owned_quantity = owned_quantity
+
+        @discord.ui.button(label="1️⃣ قطعة واحدة", style=ButtonStyle.secondary)
+        async def sell_one(self, interaction: Interaction, button: Button):
+            await self.process_sell(interaction, 1)
+
+        @discord.ui.button(label="🔟 عشرة", style=ButtonStyle.primary)
+        async def sell_ten(self, interaction: Interaction, button: Button):
+            quantity = min(10, self.owned_quantity)
+            await self.process_sell(interaction, quantity)
+
+        @discord.ui.button(label="💯 مئة", style=ButtonStyle.primary)
+        async def sell_hundred(self, interaction: Interaction, button: Button):
+            quantity = min(100, self.owned_quantity)
+            await self.process_sell(interaction, quantity)
+
+        @discord.ui.button(label="🔄 نصف ما أملك", style=ButtonStyle.success)
+        async def sell_half(self, interaction: Interaction, button: Button):
+            quantity = max(1, self.owned_quantity // 2)
+            await self.process_sell(interaction, quantity)
+
+        @discord.ui.button(label="💸 بيع الكل", style=ButtonStyle.danger)
+        async def sell_all(self, interaction: Interaction, button: Button):
+            await self.process_sell(interaction, self.owned_quantity)
+
+        async def process_sell(self, interaction: Interaction, quantity):
+            if interaction.user.id != ctx.author.id:
+                await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
+                return
+
+            total_earning = self.item_price * quantity
+            
+            # تحديث البيانات
+            data = load_data()
+            user = data[user_id]
+            bag = user.get("حقيبة", [])
+            
+            # التأكد من وجود العناصر
+            available_count = bag.count(self.item_name)
+            if available_count < quantity:
+                await interaction.response.send_message(
+                    f"❌ لا تملك {quantity} من {self.item_name}!\nلديك فقط: {available_count}",
+                    ephemeral=True
+                )
+                return
+
+            # تنفيذ البيع
+            for _ in range(quantity):
+                bag.remove(self.item_name)
+            user["balance"]["دولار"] += total_earning
+            save_data(data)
+
+            embed = Embed(
+                title="✅ تمت عملية البيع بنجاح!",
+                description=f"💰 بعت **{quantity:,}** من {self.item_name}",
+                color=0x00ff00
+            )
+            embed.add_field(name="💰 المبلغ المحصل", value=f"{total_earning:,}$", inline=True)
+            embed.add_field(name="💳 رصيدك الجديد", value=f"{user['balance']['دولار']:,}$", inline=True)
+            embed.add_field(name="📦 المتبقي", value=f"{bag.count(self.item_name)} قطعة", inline=True)
+
+            await interaction.response.edit_message(embed=embed, view=None)
 
     await ctx.send(embed=embed, view=ShopView())
 
