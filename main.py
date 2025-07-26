@@ -35,7 +35,8 @@ setup_advanced_help(bot)
 # تشغيل نظام المهام التلقائية
 @bot.event
 async def setup_hook():
-    bot.loop.create_task(tasks_system(bot))
+    bot.loop.create_task(tasks_system.run(bot))  # ← الآن تعمل
+
 
 # إبقاء السيرفر حي (تشغيل Flask في الخلفية)
 keep_alive()
