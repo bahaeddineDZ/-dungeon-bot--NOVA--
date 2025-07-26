@@ -1,0 +1,7 @@
+COMMAND_COOLDOWNS = {
+    "شراء": {"cooldown": 30, "last_used": {}},
+    "بيع": {"cooldown": 20, "last_used": {}},
+    "راتب": {"cooldown": 86400, "last_used": {}},
+    "سرقة": {"cooldown": 180, "last_used": {}},
+    # أضف باقي الأوامر هنا...
+}

@@ -1,0 +1,99 @@
+{
+    "597118308118036491": {
+        "active_tasks": [
+            {
+                "id": "daily_1753541668_2253",
+                "name": "🎣 صياد الأسماك",
+                "description": "اصطد 8 أسماك",
+                "type": "catch_fish",
+                "target": 8,
+                "progress": 8,
+                "reward": {
+                    "دولار": 35000,
+                    "ذهب": 20,
+                    "exp": 90
+                },
+                "difficulty": "متوسط",
+                "category": "daily",
+                "created_at": 1753541668.2323866,
+                "expires_at": 1753628068.2323868,
+                "completed": true
+            },
+            {
+                "id": "daily_1753541668_8577",
+                "name": "💰 التاجر الماهر",
+                "description": "اشتر 3 عناصر من المتجر",
+                "type": "buy_items",
+                "target": 3,
+                "progress": 3,
+                "reward": {
+                    "دولار": 30000,
+                    "ماس": 1,
+                    "exp": 80
+                },
+                "difficulty": "سهل",
+                "category": "daily",
+                "created_at": 1753541668.2323937,
+                "expires_at": 1753628068.2323937,
+                "completed": true
+            },
+            {
+                "id": "daily_1753541668_9243",
+                "name": "🪙 جامع الذهب",
+                "description": "اجمع 500 ذهب",
+                "type": "collect_gold",
+                "target": 500,
+                "progress": 0,
+                "reward": {
+                    "دولار": 50000,
+                    "ذهب": 25,
+                    "exp": 100
+                },
+                "difficulty": "سهل",
+                "category": "daily",
+                "created_at": 1753541668.2323976,
+                "expires_at": 1753628068.2323978,
+                "completed": false
+            },
+            {
+                "id": "weekly_1753541668_2490",
+                "name": "🏆 الإمبراطور",
+                "description": "وصل إلى رتبة إمبراطور",
+                "type": "reach_rank",
+                "target": 1,
+                "progress": 0,
+                "reward": {
+                    "دولار": 1000000,
+                    "ذهب": 500,
+                    "ماس": 10,
+                    "exp": 1500
+                },
+                "difficulty": "أسطوري",
+                "category": "weekly",
+                "created_at": 1753541668.2324133,
+                "expires_at": 1754146468.2324133,
+                "completed": false
+            },
+            {
+                "id": "weekly_1753541668_1729",
+                "name": "⚔️ المحارب الشجاع",
+                "description": "انتصر في 10 معارك نهب",
+                "type": "win_raids",
+                "target": 10,
+                "progress": 0,
+                "reward": {
+                    "دولار": 200000,
+                    "ذهب": 100,
+                    "ماس": 3,
+                    "exp": 500
+                },
+                "difficulty": "صعب",
+                "category": "weekly",
+                "created_at": 1753541668.2324176,
+                "expires_at": 1754146468.2324178,
+                "completed": false
+            }
+        ],
+        "last_update": 1753548238.4971313
+    }
+}
