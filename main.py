@@ -20,6 +20,10 @@ from tasks_system import tasks_system
 from keep_alive import keep_alive
 from dungeons_system import *
 from help_system import setup_advanced_help
+# ====== إعداد البوت ======
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix="", intents=intents)
 
 # إزالة أمر المساعدة الافتراضي (اختياري إذا عندك help مخصص)
 bot.remove_command("help")
@@ -45,10 +49,6 @@ bot.run(TOKEN)
 # ====== setup advanced help system ======
 advanced_help_system = None
 
-# ====== إعداد البوت ======
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix="", intents=intents)
 
 # ====== cooldown tasks ======
 @tasks.loop(seconds=60)
