@@ -33,7 +33,9 @@ bot.remove_command("help")
 setup_advanced_help(bot)
 
 # تشغيل نظام المهام التلقائية
-bot.loop.create_task(tasks_system(bot))
+@bot.event
+async def setup_hook():
+    bot.loop.create_task(tasks_system(bot))
 
 # إبقاء السيرفر حي (تشغيل Flask في الخلفية)
 keep_alive()
