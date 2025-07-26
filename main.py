@@ -5564,4 +5564,12 @@ async def dungeon_stats(ctx):
 
 # -------------------------- تشغيل البوت --------------------------
 
-bot.run(os.getenv('DISCORD_TOKEN'))
+# فحص وجود الرمز المميز
+discord_token = os.getenv('DISCORD_TOKEN')
+if not discord_token:
+    print("❌ خطأ: لم يتم العثور على DISCORD_TOKEN في متغيرات البيئة!")
+    print("💡 تأكد من إضافة الرمز المميز في تبويب Secrets")
+    exit(1)
+
+print(f"🔑 تم العثور على الرمز المميز: {discord_token[:20]}...")
+bot.run(discord_token)
