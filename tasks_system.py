@@ -9,6 +9,19 @@ from data_utils import load_data, save_data
 TASKS_FILE = "user_tasks.json"
 
 class TasksSystem:
+    import asyncio
+
+    async def run(self, bot):
+        """تحديث دوري للمهام لكل المستخدمين النشطين"""
+        while True:
+            try:
+                data = load_data()
+                for user_id in data.keys():
+                    self.check_and_update_tasks(user_id)
+            except Exception as e:
+                print(f"[TASK ERROR] {e}")
+            await asyncio.sleep(3600)  # تحديث كل ساعة
+
     def __init__(self):
         self.tasks_file = TASKS_FILE
         self.task_templates = {
