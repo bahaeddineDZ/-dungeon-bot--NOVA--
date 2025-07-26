@@ -21,13 +21,28 @@ from keep_alive import keep_alive
 from dungeons_system import *
 from help_system import setup_advanced_help
 
-# ====== bot setup ======
+# ====== إعداد البوت ======
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="", intents=intents)
 
-# ====== start services ======
+# إزالة أمر المساعدة الافتراضي (اختياري إذا عندك help مخصص)
+bot.remove_command("help")
+
+# إعداد نظام المساعدة
+setup_advanced_help(bot)
+
+# تشغيل نظام المهام التلقائية
+bot.loop.create_task(tasks_system(bot))
+
+# إبقاء السيرفر حي (تشغيل Flask في الخلفية)
 keep_alive()
+
+# الحصول على التوكن من متغير البيئة
+TOKEN = os.getenv("DISCORD_TOKEN")
+
+# تشغيل البوت
+bot.run(TOKEN)
 
 # ====== setup advanced help system ======
 advanced_help_system = None
