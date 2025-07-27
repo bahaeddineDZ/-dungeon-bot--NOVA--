@@ -4813,10 +4813,7 @@ async def dungeon_stats(ctx):
 
 # -------------------------- تشغيل البوت --------------------------
 
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
 
 # معالج أخطاء عام
 @bot.event
