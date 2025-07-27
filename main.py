@@ -4842,4 +4842,4 @@ if not token:
 else:
     print(f"✅ تم العثور على التوكن بطول: {len(token)} حرف")
 
-bot.run(os.getenv('BOT_TOKEN'))
+bot.run(token)
