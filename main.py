@@ -2182,41 +2182,60 @@ class HelpView(View):
 # تم استبدال الأمر بنظام الشروحات المطور في help_system.py
 
 # ------------------------------------------------- تحويل---------------------فاصل-----
-@bot.command(name="تحويل")
-async def transfer(ctx, member: discord.Member, العملة: str, المبلغ: int):
-    if member.id == ctx.author.id:
-        await ctx.send("❌ لا يمكنك تحويل العملات إلى نفسك.")
+@bot.event
+async def on_message(message):
+    if message.author.bot:
         return
 
-    if المبلغ <= 0:
-        await ctx.send("❌ يجب أن يكون المبلغ أكبر من 0.")
-        return
+    if message.content.startswith("تحويل"):
+        parts = message.content.split()
 
-    user_id = str(ctx.author.id)
-    target_id = str(member.id)
+        # التحقق من الصيغة
+        if len(message.mentions) == 0 or len(parts) < 4:
+            await message.channel.send("❌ الصيغة الصحيحة: تحويل @المستخدم العملة المبلغ")
+            return
 
-    init_user(user_id, ctx.author.display_name)
-    init_user(target_id, target.display_name)
+        try:
+            member = message.mentions[0]
+            العملة = parts[2]
+            المبلغ = int(parts[3])
+        except (IndexError, ValueError):
+            await message.channel.send("❌ تأكد من كتابة الأمر بالشكل الصحيح.")
+            return
 
-    data = load_data()
-    user = data[user_id]
-    target = data[target_id]
+        if member.id == message.author.id:
+            await message.channel.send("❌ لا يمكنك تحويل العملات إلى نفسك.")
+            return
 
-    if العملة not in ["دولار", "ذهب", "ماس"]:
-        await ctx.send("❌ العملة غير معروفة. اختر من: دولار، ذهب، ماس.")
-        return
+        if المبلغ <= 0:
+            await message.channel.send("❌ يجب أن يكون المبلغ أكبر من 0.")
+            return
 
-    if user.get(العملة, 0) < المبلغ:
-        await ctx.send(f"❌ ليس لديك ما يكفي من {العملة} لإتمام التحويل.")
-        return
+        user_id = str(message.author.id)
+        target_id = str(member.id)
 
-    # ✅ إجراء التحويل
-    user[العملة] -= المبلغ
-    target[العملة] = target.get(العملة, 0) + المبلغ
+        init_user(user_id, message.author.display_name)
+        init_user(target_id, member.display_name)
 
-    save_data(data)
+        data = load_data()
+        user = data[user_id]
+        target = data[target_id]
 
-    await ctx.send(f"✅ تم تحويل {المبلغ} {العملة} إلى {member.mention} بنجاح.")
+        if العملة not in ["دولار", "ذهب", "ماس"]:
+            await message.channel.send("❌ العملة غير معروفة. اختر من: دولار، ذهب، ماس.")
+            return
+
+        if user.get(العملة, 0) < المبلغ:
+            await message.channel.send(f"❌ ليس لديك ما يكفي من {العملة} لإتمام التحويل.")
+            return
+
+        # ✅ إجراء التحويل
+        user[العملة] -= المبلغ
+        target[العملة] = target.get(العملة, 0) + المبلغ
+
+        save_data(data)
+
+        await message.channel.send(f"✅ تم تحويل {المبلغ} {العملة} إلى {member.mention} بنجاح.")
 
 # ------------------------------------------------- حسابي ---------------------فاصل-----
 async def handle_my_profile_v2_command(message):
@@ -2564,214 +2583,208 @@ async def handle_farm_status_command(message):
     await message.channel.send(embed=embed, view=view)
 # ----------------------------------------- نظام المهام والخبرة -------------------------------------
 
-@bot.command(name="مهام")
-async def tasks_command(ctx):
-    """عرض المهام الحالية للمستخدم"""
-    user_id = str(ctx.author.id)
-    init_user(user_id, ctx.author.display_name)
+if message.content.strip().lower() == "مهام":
+        ctx = await bot.get_context(message)
+        user_id = str(message.author.id)
+        init_user(user_id, message.author.display_name)
 
-    # فحص وتحديث المهام
-    tasks_system.check_and_update_tasks(user_id)
+        # فحص وتحديث المهام
+        tasks_system.check_and_update_tasks(user_id)
 
-    # جلب المهام النشطة
-    user_tasks = tasks_system.load_user_tasks(user_id)
-    active_tasks = user_tasks.get("active_tasks", [])
+        # جلب المهام النشطة
+        user_tasks = tasks_system.load_user_tasks(user_id)
+        active_tasks = user_tasks.get("active_tasks", [])
 
-    if not active_tasks:
-        await ctx.send("📝 لا توجد مهام متاحة حالياً. سيتم إنشاء مهام جديدة قريباً!")
-        return
+        if not active_tasks:
+            await message.channel.send("📝 لا توجد مهام متاحة حالياً. سيتم إنشاء مهام جديدة قريباً!")
+            return
 
-    class TasksView(View):
-        def __init__(self):
-            super().__init__(timeout=120)
+        class TasksView(View):
+            def __init__(self):
+                super().__init__(timeout=120)
 
-            # تجميع المهام حسب الفئة
-            daily_tasks = [t for t in active_tasks if t["category"] == "daily"]
-            weekly_tasks = [t for t in active_tasks if t["category"] == "weekly"]
+                daily_tasks = [t for t in active_tasks if t["category"] == "daily"]
+                weekly_tasks = [t for t in active_tasks if t["category"] == "weekly"]
 
-            if daily_tasks:
-                self.add_item(TasksCategoryButton("📅 يومية", daily_tasks))
-            if weekly_tasks:
-                self.add_item(TasksCategoryButton("🗓️ أسبوعية", weekly_tasks))
+                if daily_tasks:
+                    self.add_item(TasksCategoryButton("📅 يومية", daily_tasks))
+                if weekly_tasks:
+                    self.add_item(TasksCategoryButton("🗓️ أسبوعية", weekly_tasks))
 
-    class TasksCategoryButton(Button):
-        def __init__(self, label, tasks_list):
-            super().__init__(label=label, style=ButtonStyle.primary)
-            self.tasks_list = tasks_list
+        class TasksCategoryButton(Button):
+            def __init__(self, label, tasks_list):
+                super().__init__(label=label, style=ButtonStyle.primary)
+                self.tasks_list = tasks_list
 
-        async def callback(self, interaction: Interaction):
-            if interaction.user.id != ctx.author.id:
-                await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
-                return
+            async def callback(self, interaction: Interaction):
+                if interaction.user.id != message.author.id:
+                    await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
+                    return
 
-            embed = Embed(
-                title=f"🎯 {self.label}",
-                description="اختر مهمة لعرض تفاصيلها أو استلام المكافأة:",
-                color=0x3498db
-            )
+                embed = Embed(
+                    title=f"🎯 {self.label}",
+                    description="اختر مهمة لعرض تفاصيلها أو استلام المكافأة:",
+                    color=0x3498db
+                )
 
-            view = TaskDetailView(self.tasks_list)
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+                view = TaskDetailView(self.tasks_list)
+                await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    class TaskDetailView(View):
-        def __init__(self, tasks_list):
-            super().__init__(timeout=60)
+        class TaskDetailView(View):
+            def __init__(self, tasks_list):
+                super().__init__(timeout=60)
 
-            for task in tasks_list[:10]:  # حد أقصى 10 مهام
-                self.add_item(TaskButton(task))
+                for task in tasks_list[:10]:
+                    self.add_item(TaskButton(task))
 
-    class TaskButton(Button):
-        def __init__(self, task):
-            self.task = task
-            progress_percent = int((task["progress"] / task["target"]) * 100)
+        class TaskButton(Button):
+            def __init__(self, task):
+                self.task = task
+                progress_percent = int((task["progress"] / task["target"]) * 100)
 
-            if task["completed"] and not task.get("claimed", False):
-                style = ButtonStyle.success
-                label = f"✅ {task['name'][:20]}..."
-            elif task["completed"]:
-                style = ButtonStyle.secondary
-                label = f"🏆 {task['name'][:20]}..."
-            else:
-                style = ButtonStyle.primary
-                label = f"⏳ {task['name'][:20]}... ({progress_percent}%)"
+                if task["completed"] and not task.get("claimed", False):
+                    style = ButtonStyle.success
+                    label = f"✅ {task['name'][:20]}..."
+                elif task["completed"]:
+                    style = ButtonStyle.secondary
+                    label = f"🏆 {task['name'][:20]}..."
+                else:
+                    style = ButtonStyle.primary
+                    label = f"⏳ {task['name'][:20]}... ({progress_percent}%)"
 
-            super().__init__(label=label, style=style)
+                super().__init__(label=label, style=style)
 
-        async def callback(self, interaction: Interaction):
-            if interaction.user.id != ctx.author.id:
-                await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
-                return
+            async def callback(self, interaction: Interaction):
+                if interaction.user.id != message.author.id:
+                    await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
+                    return
 
-            # تحديد لون الصعوبة
-            difficulty_colors = {
-                "سهل": 0x2ecc71,
-                "متوسط": 0xf39c12,
-                "صعب": 0xe67e22,
-                "صعب جداً": 0xe74c3c,
-                "أسطوري": 0x9b59b6
-            }
+                difficulty_colors = {
+                    "سهل": 0x2ecc71,
+                    "متوسط": 0xf39c12,
+                    "صعب": 0xe67e22,
+                    "صعب جداً": 0xe74c3c,
+                    "أسطوري": 0x9b59b6
+                }
 
-            color = difficulty_colors.get(self.task["difficulty"], 0x3498db)
+                color = difficulty_colors.get(self.task["difficulty"], 0x3498db)
 
-            embed = Embed(
-                title=f"🎯 {self.task['name']}",
-                description=self.task["description"],
-                color=color
-            )
+                embed = Embed(
+                    title=f"🎯 {self.task['name']}",
+                    description=self.task["description"],
+                    color=color
+                )
 
-            # شريط التقدم
-            progress_percent = int((self.task["progress"] / self.task["target"]) * 100)
-            progress_bar = "█" * (progress_percent // 10) + "░" * (10 - progress_percent // 10)
+                progress_percent = int((self.task["progress"] / self.task["target"]) * 100)
+                progress_bar = "█" * (progress_percent // 10) + "░" * (10 - progress_percent // 10)
 
-            embed.add_field(
-                name="📊 التقدم",
-                value=f"`{progress_bar}` {self.task['progress']}/{self.task['target']} ({progress_percent}%)",
-                inline=False
-            )
-
-            embed.add_field(
-                name="🏅 الصعوبة",
-                value=self.task["difficulty"],
-                inline=True
-            )
-
-            # عرض المكافآت
-            rewards_text = ""
-            for currency, amount in self.task["reward"].items():
-                if currency == "دولار":
-                    rewards_text += f"💵 {amount:,} دولار\n"
-                elif currency == "ذهب":
-                    rewards_text += f"🪙 {amount} ذهب\n"
-                elif currency == "ماس":
-                    rewards_text += f"💎 {amount} ماس\n"
-                elif currency == "exp":
-                    rewards_text += f"⭐ {amount} خبرة\n"
-
-            embed.add_field(
-                name="🎁 المكافآت",
-                value=rewards_text.strip(),
-                inline=True
-            )
-
-            # وقت انتهاء الصلاحية
-            time_left = self.task["expires_at"] - time.time()
-            if time_left > 0:
-                hours = int(time_left // 3600)
-                minutes = int((time_left % 3600) // 60)
                 embed.add_field(
-                    name="⏰ الوقت المتبقي",
-                    value=f"{hours}س {minutes}د",
+                    name="📊 التقدم",
+                    value=f"`{progress_bar}` {self.task['progress']}/{self.task['target']} ({progress_percent}%)",
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="🏅 الصعوبة",
+                    value=self.task["difficulty"],
                     inline=True
                 )
 
-            view = None
-            if self.task["completed"] and not self.task.get("claimed", False):
-                view = ClaimRewardView(self.task)
-
-            await interaction.response.edit_message(embed=embed, view=view)
-
-    class ClaimRewardView(View):
-        def __init__(self, task):
-            super().__init__(timeout=30)
-            self.task = task
-
-        @discord.ui.button(label="🎁 استلام المكافأة", style=ButtonStyle.success)
-        async def claim_reward(self, interaction: Interaction, button: Button):
-            if interaction.user.id != ctx.author.id:
-                await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
-                return
-
-            reward = tasks_system.claim_task_reward(user_id, self.task["id"])
-
-            if reward:
-                reward_text = ""
-                for currency, amount in reward.items():
+                rewards_text = ""
+                for currency, amount in self.task["reward"].items():
                     if currency == "دولار":
-                        reward_text += f"💵 {amount:,} دولار\n"
+                        rewards_text += f"💵 {amount:,} دولار\n"
                     elif currency == "ذهب":
-                        reward_text += f"🪙 {amount} ذهب\n"
+                        rewards_text += f"🪙 {amount} ذهب\n"
                     elif currency == "ماس":
-                        reward_text += f"💎 {amount} ماس\n"
+                        rewards_text += f"💎 {amount} ماس\n"
                     elif currency == "exp":
-                        reward_text += f"⭐ {amount} خبرة\n"
+                        rewards_text += f"⭐ {amount} خبرة\n"
 
-                embed = Embed(
-                    title="🎉 تم استلام المكافأة!",
-                    description=f"✅ تم إنجاز المهمة: **{self.task['name']}**\n\n🎁 **المكافآت المستلمة:**\n{reward_text}",
-                    color=0x2ecc71
+                embed.add_field(
+                    name="🎁 المكافآت",
+                    value=rewards_text.strip(),
+                    inline=True
                 )
 
-                await interaction.response.edit_message(embed=embed, view=None)
-            else:
-                await interaction.response.send_message("❌ حدث خطأ في استلام المكافأة.", ephemeral=True)
+                time_left = self.task["expires_at"] - time.time()
+                if time_left > 0:
+                    hours = int(time_left // 3600)
+                    minutes = int((time_left % 3600) // 60)
+                    embed.add_field(
+                        name="⏰ الوقت المتبقي",
+                        value=f"{hours}س {minutes}د",
+                        inline=True
+                    )
 
-    # جلب معلومات المستوى
-    level_info = tasks_system.get_user_level_info(user_id)
+                view = None
+                if self.task["completed"] and not self.task.get("claimed", False):
+                    view = ClaimRewardView(self.task)
 
-    embed = Embed(
-        title="🎯 لوحة المهام",
-        description=f"مرحباً {ctx.author.mention}! إليك مهامك الحالية:",
-        color=0x3498db
-    )
+                await interaction.response.edit_message(embed=embed, view=view)
 
-    embed.add_field(
-        name="📈 مستواك",
-        value=f"🏆 المستوى: **{level_info['level']}**\n⭐ الخبرة: **{level_info['experience']:,}**\n🎯 للمستوى القادم: **{level_info['exp_needed']}**",
-        inline=False
-    )
+        class ClaimRewardView(View):
+            def __init__(self, task):
+                super().__init__(timeout=30)
+                self.task = task
 
-    # إحصائيات المهام
-    completed_count = sum(1 for t in active_tasks if t["completed"])
-    total_count = len(active_tasks)
+            @discord.ui.button(label="🎁 استلام المكافأة", style=ButtonStyle.success)
+            async def claim_reward(self, interaction: Interaction, button: Button):
+                if interaction.user.id != message.author.id:
+                    await interaction.response.send_message("❌ هذا ليس لك!", ephemeral=True)
+                    return
 
-    embed.add_field(
-        name="📊 إحصائيات المهام",
-        value=f"✅ مكتملة: **{completed_count}**\n⏳ جارية: **{total_count - completed_count}**\n📝 إجمالي: **{total_count}**",
-        inline=False
-    )
+                reward = tasks_system.claim_task_reward(user_id, self.task["id"])
 
-    await ctx.send(embed=embed, view=TasksView())
+                if reward:
+                    reward_text = ""
+                    for currency, amount in reward.items():
+                        if currency == "دولار":
+                            reward_text += f"💵 {amount:,} دولار\n"
+                        elif currency == "ذهب":
+                            reward_text += f"🪙 {amount} ذهب\n"
+                        elif currency == "ماس":
+                            reward_text += f"💎 {amount} ماس\n"
+                        elif currency == "exp":
+                            reward_text += f"⭐ {amount} خبرة\n"
 
+                    embed = Embed(
+                        title="🎉 تم استلام المكافأة!",
+                        description=f"✅ تم إنجاز المهمة: **{self.task['name']}**\n\n🎁 **المكافآت المستلمة:**\n{reward_text}",
+                        color=0x2ecc71
+                    )
+
+                    await interaction.response.edit_message(embed=embed, view=None)
+                else:
+                    await interaction.response.send_message("❌ حدث خطأ في استلام المكافأة.", ephemeral=True)
+
+        # جلب معلومات المستوى
+        level_info = tasks_system.get_user_level_info(user_id)
+
+        embed = Embed(
+            title="🎯 لوحة المهام",
+            description=f"مرحباً {message.author.mention}! إليك مهامك الحالية:",
+            color=0x3498db
+        )
+
+        embed.add_field(
+            name="📈 مستواك",
+            value=f"🏆 المستوى: **{level_info['level']}**\n⭐ الخبرة: **{level_info['experience']:,}**\n🎯 للمستوى القادم: **{level_info['exp_needed']}**",
+            inline=False
+        )
+
+        completed_count = sum(1 for t in active_tasks if t["completed"])
+        total_count = len(active_tasks)
+
+        embed.add_field(
+            name="📊 إحصائيات المهام",
+            value=f"✅ مكتملة: **{completed_count}**\n⏳ جارية: **{total_count - completed_count}**\n📝 إجمالي: **{total_count}**",
+            inline=False
+        )
+
+        await message.channel.send(embed=embed, view=TasksView())
+
+    await bot.process_commands(message)  # إذا كنت لا تزال تستخدم أوامر أخرى
 @bot.command(name="مستوى")
 async def level_command(ctx):
     """عرض معلومات المستوى والخبرة"""
