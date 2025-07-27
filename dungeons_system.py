@@ -650,7 +650,7 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
             battle_log.append("⏰ المعركة طويلة جداً! انتهت بالتعادل.")
             break
 victory = boss_hp <= 0 and player_hp > 0
-   if victory:
+if victory:
         battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         battle_log.append(f"🎉 **النصر!** هزمت {dungeon['boss']}!")
         
