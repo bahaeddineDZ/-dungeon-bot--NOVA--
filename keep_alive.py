@@ -1,25 +1,41 @@
 
 from flask import Flask
 from threading import Thread
-import os
+import time
 
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "البوت يعمل بنجاح! 🤖"
+    return "البوت يعمل بنجاح! 🚀"
 
 @app.route('/status')
 def status():
-    return {"status": "active", "message": "Discord Bot is running"}
+    return {
+        "status": "online",
+        "message": "Discord Bot is running",
+        "timestamp": time.time()
+    }
+
+@app.route('/health')
+def health():
+    return {
+        "status": "healthy",
+        "uptime": time.time(),
+        "message": "Bot is running smoothly"
+    }
 
 def run():
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    try:
+        app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    except Exception as e:
+        print(f"خطأ في تشغيل خادم Flask: {e}")
 
 def keep_alive():
-    """تشغيل خادم Flask في thread منفصل للحفاظ على البوت نشطاً"""
-    t = Thread(target=run)
-    t.daemon = True
-    t.start()
-    print(f"🌐 خادم Flask يعمل على المنفذ {os.environ.get('PORT', 5000)}")
+    try:
+        t = Thread(target=run)
+        t.daemon = True
+        t.start()
+        print("✅ تم تشغيل خادم المراقبة على المنفذ 5000")
+    except Exception as e:
+        print(f"خطأ في تشغيل المراقبة: {e}")
