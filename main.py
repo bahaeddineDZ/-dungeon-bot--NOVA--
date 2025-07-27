@@ -40,8 +40,14 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    ctx = await bot.get_context(message)
-    await bot.invoke(ctx)
+    content = message.content.strip().lower()
+
+    if content == "متجر":
+        await handle_shop_command(message)
+        return
+
+    # مهم لتشغيل باقي الأوامر إذا أضفت بادئة لاحقًا
+    await bot.process_commands(message)
 
 
 @tasks.loop(seconds=60)
