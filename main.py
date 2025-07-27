@@ -1821,6 +1821,31 @@ async def on_message(message):
     elif content.startswith("انتقام "):
         await handle_revenge_command(message, args)
         return
+            elif content == "صيد":
+        await handle_fishing_command(message)
+        return
+    elif content == "صياد":
+        await handle_fisher_shop_command(message)
+        return
+    elif content == "حوض":
+        await handle_pond_command(message)
+        return
+    elif content == "مزارع":
+        await handle_farm_shop_command(message)
+        return
+    elif content == "زرع":
+        await handle_plant_seed_command(message)
+        return
+    elif content == "مزرعة":
+        await handle_farm_status_command(message)
+        return
+    elif content == "مهام":
+        await handle_tasks_command(message)
+        return
+    elif content.startswith("تحويل"):
+        await handle_transfer_command(message)
+        return
+
 
     # متابعة بقية الأوامر
     await bot.process_commands(message)
