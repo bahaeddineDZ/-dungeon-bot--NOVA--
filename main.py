@@ -4145,7 +4145,7 @@ async def my_activities(ctx):
 
     await ctx.send(embed=embed)
 
-@bot.command(name="حذف")
+@bot.command(name="تدمير الحساب")
 async def delete_account(ctx):
     user_id = str(ctx.author.id)
     data = load_data()
