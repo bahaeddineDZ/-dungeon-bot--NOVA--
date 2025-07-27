@@ -1769,103 +1769,7 @@ async def on_message(message):
 
         await message.channel.send(embed=embed, view=WelcomeView())
 
-    # معالجة الأوامر
-    content = message.content.strip().lower()
-    args = content.split()
-
-    if content == "متجر":
-        await handle_shop_command(message)
-        return
-    elif content == "اختصاص":
-        await handle_specialization_command(message)
-        return
-    elif content == "سلام":
-        await handle_greeting_command(message)
-        return
-    elif content == "رصيد":
-        await handle_balance_command(message)
-        return
-    elif content == "مهنتي":
-        await handle_job_command(message)
-        return
-    elif content == "ثروة":
-        await handle_wealth_command(message)
-        return
-    elif content == "عمل":
-        await handle_work_command(message)
-        return
-    elif content == "ترقية":
-        await handle_upgrade_command(message)
-        return
-    elif content == "يومي":
-        await handle_daily_command(message)
-        return
-    elif content == "حسابي":
-        await handle_profile_command(message)
-        return
-    elif content == "حقيبة":
-        await handle_inventory_command(message)
-        return
-    elif content == "تبريد":
-        await handle_cooldowns_command(message)
-        return
-    elif content == "درع":
-        await handle_shield_command(message)
-        return
-    elif content.startswith("نهب "):
-        await handle_steal_command(message, args)
-        return
-    elif content.startswith("حماية"):
-        await handle_protect_command(message, args)
-        return
-    elif content.startswith("انتقام "):
-        await handle_revenge_command(message, args)
-        return
-            elif content == "صيد":
-        await handle_fishing_command(message)
-        return
-    elif content == "صياد":
-        await handle_fisher_shop_command(message)
-        return
-    elif content == "حوض":
-        await handle_pond_command(message)
-        return
-    elif content == "مزارع":
-        await handle_farm_shop_command(message)
-        return
-    elif content == "زرع":
-        await handle_plant_seed_command(message)
-        return
-    elif content == "مزرعة":
-        await handle_farm_status_command(message)
-        return
-    elif content == "مهام":
-        await handle_tasks_command(message)
-        return
-    elif content.startswith("تحويل"):
-        await handle_transfer_command(message)
-        return
-
-
-    # متابعة بقية الأوامر
-    await bot.process_commands(message)
-
-# ========================= تشغيل البوت =========================
-
-@bot.event
-async def on_ready():
-    global advanced_help_system
-    print(f"🔷 البوت جاهز: {bot.user}")
-
-    # تفعيل نظام الشروحات المطور
-    advanced_help_system = setup_advanced_help(bot)
-    print("📚 تم تفعيل نظام الشروحات المطور")
-
-# تشغيل الخدمات
-keep_alive()
-TOKEN = os.getenv("DISCORD_TOKEN")
-bot.run(TOKEN)
-
+  
 
 # ================= أوامر أخرى محولة من @bot.command =================
 
@@ -5284,6 +5188,101 @@ async def handle_dungeon_stats_command(message):
 
 
 
+  # معالجة الأوامر
+       content = message.content.strip().lower()
+    args = content.split()
+
+    if content == "متجر":
+        await handle_shop_command(message)
+        return
+    elif content == "اختصاص":
+        await handle_specialization_command(message)
+        return
+    elif content == "سلام":
+        await handle_greeting_command(message)
+        return
+    elif content == "رصيد":
+        await handle_balance_command(message)
+        return
+    elif content == "مهنتي":
+        await handle_job_command(message)
+        return
+    elif content == "ثروة":
+        await handle_wealth_command(message)
+        return
+    elif content == "عمل":
+        await handle_work_command(message)
+        return
+    elif content == "ترقية":
+        await handle_upgrade_command(message)
+        return
+    elif content == "يومي":
+        await handle_daily_command(message)
+        return
+    elif content == "حسابي":
+        await handle_profile_command(message)
+        return
+    elif content == "حقيبة":
+        await handle_inventory_command(message)
+        return
+    elif content == "تبريد":
+        await handle_cooldowns_command(message)
+        return
+    elif content == "درع":
+        await handle_shield_command(message)
+        return
+    elif content.startswith("نهب "):
+        await handle_steal_command(message, args)
+        return
+    elif content.startswith("حماية"):
+        await handle_protect_command(message, args)
+        return
+    elif content.startswith("انتقام "):
+        await handle_revenge_command(message, args)
+        return
+    elif content == "صيد":
+        await handle_fishing_command(message)
+        return
+    elif content == "صياد":
+        await handle_fisher_shop_command(message)
+        return
+    elif content == "حوض":
+        await handle_pond_command(message)
+        return
+    elif content == "مزارع":
+        await handle_farm_shop_command(message)
+        return
+    elif content == "زرع":
+        await handle_plant_seed_command(message)
+        return
+    elif content == "مزرعة":
+        await handle_farm_status_command(message)
+        return
+    elif content == "مهام":
+        await handle_tasks_command(message)
+        return
+    elif content.startswith("تحويل"):
+        await handle_transfer_command(message)
+        return
+
+    await bot.process_commands(message)
+
+
+# ========================= تشغيل البوت =========================
+
+@bot.event
+async def on_ready():
+    global advanced_help_system
+    print(f"🔷 البوت جاهز: {bot.user}")
+
+    # تفعيل نظام الشروحات المطور
+    advanced_help_system = setup_advanced_help(bot)
+    print("📚 تم تفعيل نظام الشروحات المطور")
+
+# تشغيل الخدمات
+keep_alive()
+TOKEN = os.getenv("DISCORD_TOKEN")
+bot.run(TOKEN)
 
 
 # -------------------------- تشغيل البوت --------------------------
