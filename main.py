@@ -25,6 +25,8 @@ from help_system import setup_advanced_help
 MARRIAGE_AVAILABLE = False
 GAMES_AVAILABLE = False
 SHOP_AVAILABLE = False
+if MARRIAGE_AVAILABLE:
+    setup_marriage_commands(bot)
 
 try:
     from marriage_system import setup_marriage_commands
