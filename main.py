@@ -4812,6 +4812,13 @@ async def dungeon_stats(ctx):
 
 
 # -------------------------- تشغيل البوت --------------------------
+token = os.getenv("DISCORD_TOKEN")
+
+if not token:
+    print("❌ لم يتم العثور على التوكن في البيئة!")
+    exit(1)
+else:
+    print(f"✅ تم تحميل التوكن بنجاح، طوله: {len(token)}")
 
 
 
