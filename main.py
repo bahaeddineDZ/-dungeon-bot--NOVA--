@@ -21,8 +21,6 @@ from keep_alive import keep_alive
 from dungeons_system import *
 from help_system import setup_advanced_help
 from shop_system import setup_shop_commands
-from marriage_system import setup_marriage_commands
-from new_games import setup_new_games
 
 # ====== live======
 
@@ -59,12 +57,7 @@ advanced_help_system = None
 # ====== cooldown tasks ======
 @tasks.loop(seconds=60)
 async def update_farm():
-    """تحديث دوري لبيانات المزرعة"""
-    try:
-        # يمكن إضافة منطق تحديث المزرعة هنا إذا لزم الأمر
-        pass
-    except Exception as e:
-        print(f"خطأ في تحديث المزرعة: {e}")
+    update_farm_data()
 
 # ====== data files ======
 DATA_FILE = "users.json"
@@ -857,39 +850,13 @@ async def on_ready():
     global advanced_help_system
     print(f"🔷 البوت جاهز: {bot.user}")
     
-    try:
-        # تفعيل نظام الشروحات المطور
-        advanced_help_system = setup_advanced_help(bot)
-        print("📚 تم تفعيل نظام الشروحات المطور")
-        
-        # تفعيل نظام المتجر المطور
-        try:
-            setup_shop_commands(bot)
-            print("🏪 تم تفعيل نظام المتجر المطور")
-        except Exception as e:
-            print(f"⚠️ خطأ في تفعيل نظام المتجر: {e}")
-        
-        # تفعيل نظام الزواج
-        try:
-            setup_marriage_commands(bot)
-            print("💍 تم تفعيل نظام الزواج")
-        except Exception as e:
-            print(f"⚠️ خطأ في تفعيل نظام الزواج: {e}")
-        
-        # تفعيل الألعاب الجديدة
-        try:
-            setup_new_games(bot)
-            print("🎮 تم تفعيل الألعاب الجديدة")
-        except Exception as e:
-            print(f"⚠️ خطأ في تفعيل الألعاب الجديدة: {e}")
-            print("💡 تأكد من وجود جميع الوحدات المطلوبة")
-    except Exception as e:
-        print(f"❌ خطأ في تهيئة الأنظمة: {e}")
-        
-    # تفعيل مهمة تحديث المزرعة
-    if not update_farm.is_running():
-        update_farm.start()
-        print("🌾 تم تفعيل نظام تحديث المزرعة")
+    # تفعيل نظام الشروحات المطور
+    advanced_help_system = setup_advanced_help(bot)
+    print("📚 تم تفعيل نظام الشروحات المطور")
+    
+    # تفعيل نظام المتجر المطور
+    setup_shop_commands(bot)
+    print("🏪 تم تفعيل نظام المتجر المطور")
 
 
 @bot.command(name="سلام")
@@ -1371,62 +1338,46 @@ async def upgrade(ctx):
 @bot.command(name="يومي")
 async def daily(ctx):
     user_id = str(ctx.author.id)
-    
-    try:
-        # تحقق من التبريد
-        allowed, time_left = check_cooldown(user_id, "يومي")
-        if not allowed:
-            await ctx.send(f"⏳ يجب الانتظار {time_left} قبل الحصول على المكافأة اليومية مرة أخرى.")
-            return
+    cooldowns = load_cooldowns()
+    current_time = int(time.time())
+    user_cooldowns = cooldowns.get(user_id, {})
 
-        # تهيئة المستخدم
-        init_user(user_id, ctx.author.display_name)
-        data = load_data()
-        user = data[user_id]
-        
-        # إضافة المكافآت
-        user["balance"]["دولار"] = user["balance"].get("دولار", 0) + 100000
-        user["balance"]["ذهب"] = user["balance"].get("ذهب", 0) + 25
-        user["balance"]["ماس"] = user["balance"].get("ماس", 0) + 1
-        
-        # إضافة خبرة
-        user["experience"] = user.get("experience", 0) + 200
-        
-        # حفظ البيانات
-        save_data(data)
+    # تحقق من الكولداون
+    allowed, time_left = check_cooldown(user_id, "يومي")
+    if not allowed:
+        await ctx.send(f"⏳ يمكنك العمل مرة أخرى بعد {time_left}.")
+        return
 
-        # تسجيل النشاط
-        logs_system.add_log(
-            "daily_logs",
-            user_id,
-            ctx.author.display_name,
-            "حصل على المكافأة اليومية",
-            {"dollars": 100000, "gold": 25, "diamonds": 1, "experience": 200}
-        )
+    last_used = user_cooldowns.get("يومي", 0)
+    elapsed = current_time - last_used
+    time_left = DEFAULT_COOLDOWN["يومي"] - elapsed
 
-        # تحديث التبريد
-        update_cooldown(user_id, "يومي")
-        
-        # تحديث مهام جمع الذهب
-        completed_tasks = tasks_system.update_task_progress(user_id, "collect_gold", 25)
-        
-        success_msg = "🎁 **حصلت على مكافأتك اليومية!**\n\n💵 **100,000** دولار\n🪙 **25** ذهب\n💎 **1** ماس\n⭐ **200** نقطة خبرة"
-        
-        if completed_tasks:
-            success_msg += f"\n\n🎯 رائع! أكملت **{len(completed_tasks)}** مهمة!"
+    if time_left > 0:
+        await ctx.send(f"⏳ لا يمكنك الحصول على المكافأة الآن.\nالوقت المتبقي: {format_time(time_left)}")
+        return
 
-        embed = discord.Embed(
-            title="🎉 مكافأة يومية",
-            description=success_msg,
-            color=0x2ecc71
-        )
-        embed.set_footer(text="🔄 يمكنك الحصول على المكافأة التالية بعد 24 ساعة!")
-        
-        await ctx.send(embed=embed)
-        
-    except Exception as e:
-        print(f"خطأ في أمر يومي: {e}")
-        await ctx.send("❌ حدث خطأ أثناء إعطاء المكافأة. يرجى المحاولة مرة أخرى.")
+    # إذا وصل إلى هنا فالمكافأة متاحة
+    init_user(user_id, ctx.author.display_name)
+    data = load_data()
+    data[user_id]["balance"]["دولار"] += 100_000
+    data[user_id]["balance"]["ذهب"] += 10
+    data[user_id]["balance"]["ماس"] += 1
+    save_data(data)
+
+    # تسجيل النشاط
+    logs_system.add_log(
+        "daily_logs",
+        user_id,
+        ctx.author.display_name,
+        "حصل على المكافأة اليومية",
+        {"dollars": 100000, "gold": 25, "diamonds": 1}
+    )
+
+    # حدّث وقت التبريد
+    update_cooldown(user_id, "يومي")
+    save_cooldowns(cooldowns)
+
+    await ctx.send("🎁 حصلت على مكافأتك اليومية:\n💵 100 ألف دولار\n🪙 25 ذهب\n💎 1 ماس")
 # ----------------------------------------فاصل-- نظام صيد  --------------------------
 # ====== قواعد السمك والطعم ======
 BAIT_SHOP = {
@@ -1836,78 +1787,7 @@ class HelpView(View):
             content = explanations.get(self.topic, "❓ لا يوجد شرح متاح.")
             await interaction.response.send_message(content, ephemeral=True)
 
-# أمر الشروحات المطور مع معالجة أخطاء محسنة
-@bot.command(name="شروحات")
-async def help_command(ctx):
-    try:
-        if advanced_help_system:
-            embed = advanced_help_system.create_main_help_embed()
-            from help_system import DetailedHelpView
-            view = DetailedHelpView(advanced_help_system)
-            await ctx.send(embed=embed, view=view)
-        else:
-            # نظام شروحات بديل في حالة فشل النظام المطور
-            embed = discord.Embed(
-                title="📚 دليل الأوامر",
-                description="🎮 **مرحباً بك في نظام NOVA BANK!**",
-                color=0x3498db
-            )
-            
-            embed.add_field(
-                name="💰 اقتصاد",
-                value="`رصيد` `يومي` `عمل` `ترقية` `تداول` `استثمار`",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="🛒 متجر",
-                value="`متجر` `شراء` `بيع` `حقيبة`",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="⚔️ قتال",
-                value="`اختصاص` `نهب` `انتقام` `حماية` `درع`",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="🎮 ألعاب",
-                value="`حجر_ورقة_مقص` `تخمين` `ذاكرة` `رياضيات` `كلمات`",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="🌾 زراعة وصيد",
-                value="`مزارع` `زرع` `مزرعة` `صياد` `صيد` `حوض`",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="🏰 سراديب",
-                value="`سراديب` `عتاد` `تبريد_سراديب`",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="🎯 مهام",
-                value="`مهام` `مستوى` `خبرة` `مكافآت`",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="📊 إحصائيات",
-                value="`قوائم` `سجلات` `إحصائيات` `أنشطتي` `ثروة`",
-                inline=False
-            )
-            
-            embed.set_footer(text="💡 استخدم الأوامر لبدء رحلتك في عالم الاقتصاد!")
-            
-            await ctx.send(embed=embed)
-            
-    except Exception as e:
-        print(f"خطأ في أمر الشروحات: {e}")
-        await ctx.send("❌ حدث خطأ في تحميل الشروحات. استخدم الأمر `اوامر` كبديل.")
+# تم استبدال الأمر بنظام الشروحات المطور في help_system.py
 
 # ------------------------------------------------- تحويل---------------------فاصل-----
 @bot.command(name="تحويل")
@@ -2005,8 +1885,7 @@ command_categories = {
         "🧰 مهنة": ["مهنتي", "تبريد", "عمل", "ترقية"],
         "🎣 صيد": ["صياد", "صيد", "حوض"],
         "🌾 زراعة": ["مزارع", "زرع", "مزرعة"],
-        "🎮 ألعاب": ["حجر_ورقة_مقص", "تخمين", "ذاكرة", "رياضيات", "كلمات", "لوتو", "روليت", "بلاك_جاك"],
-        "💍 زواج": ["زواج", "طلاق", "زوجي", "هدية", "شهر_عسل"],
+        "🎮 ألعاب": ["حجر_ورقة_مقص", "تخمين", "ذاكرة", "رياضيات", "كلمات"],
         "🎯 مهام": ["مهام", "مستوى", "خبرة", "مكافآت"],
         "🏰 سراديب": ["سراديب", "عتاد", "إحصائيات_سراديب"],
         "📊 إحصائيات": ["قوائم", "سجلات", "إحصائيات", "أنشطتي", "ثروة"],
@@ -4954,66 +4833,36 @@ async def dungeon_stats(ctx):
 
 
 # -------------------------- تشغيل البوت --------------------------
+token = os.getenv("DISCORD_TOKEN")
 
-# معالج أخطاء عام محسن
+if not token:
+    print("❌ لم يتم العثور على التوكن في البيئة!")
+    exit(1)
+else:
+    print(f"✅ تم تحميل التوكن بنجاح، طوله: {len(token)}")
+
+
+
+# معالج أخطاء عام
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
-        minutes = int(error.retry_after // 60)
-        seconds = int(error.retry_after % 60)
-        time_text = f"{minutes}د {seconds}ث" if minutes > 0 else f"{seconds}ث"
-        await ctx.send(f"⏳ الأمر في فترة تبريد. جرب بعد {time_text}.")
+        await ctx.send(f"⏳ الأمر في فترة تبريد. جرب بعد {error.retry_after:.2f} ثانية.")
     elif isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send(f"❌ معامل مطلوب مفقود في الأمر `{ctx.command.name}`. تحقق من صيغة الأمر.")
+        await ctx.send("❌ معامل مطلوب مفقود. تحقق من صيغة الأمر.")
     elif isinstance(error, commands.CommandNotFound):
         return  # تجاهل الأوامر غير الموجودة
-    elif isinstance(error, commands.BotMissingPermissions):
-        await ctx.send("❌ البوت لا يملك الصلاحيات المطلوبة.")
-    elif isinstance(error, commands.UserInputError):
-        await ctx.send(f"❌ خطأ في المدخلات. تحقق من صيغة الأمر `{ctx.command.name}`.")
-    elif isinstance(error, AttributeError) and "tasks_system" in str(error):
-        await ctx.send("⚠️ نظام المهام غير متاح حالياً. جرب لاحقاً.")
     else:
-        print(f"خطأ غير متوقع في الأمر {ctx.command}: {error}")
+        print(f"خطأ غير متوقع: {error}")
         await ctx.send("❌ حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.")
+token = os.getenv("DISCORD_TOKEN")
 
-# جلب التوكن مع معالجة أفضل للأخطاء
-def get_bot_token():
-    """جلب توكن البوت من متغيرات البيئة أو الملف"""
-    # محاولة جلب التوكن من متغيرات البيئة
-    token = os.getenv("DISCORD_TOKEN")
-    
-    if not token:
-        # محاولة جلب التوكن من ملف .env إذا كان موجوداً
-        try:
-            with open('.env', 'r') as f:
-                for line in f:
-                    if line.startswith('DISCORD_TOKEN='):
-                        token = line.split('=', 1)[1].strip()
-                        break
-        except FileNotFoundError:
-            pass
-    
-    return token
+if not token:
+    print("❌ لم يتم العثور على التوكن! تحقق من متغيرات البيئة في Render.")
+    exit(1)
+else:
+    print(f"✅ تم العثور على التوكن بطول: {len(token)} حرف")
 
-# تشغيل البوت
-if __name__ == "__main__":
-    token = get_bot_token()
-    
-    if not token:
-        print("❌ لم يتم العثور على DISCORD_TOKEN!")
-        print("💡 تأكد من إضافة الرمز المميز في:")
-        print("   • متغيرات البيئة (Environment Variables)")
-        print("   • ملف .env في المجلد الرئيسي")
-        print("   • تبويب Secrets في Replit")
-        exit(1)
-    
-    print(f"✅ تم العثور على التوكن بنجاح (طول: {len(token)} حرف)")
-    
-    try:
-        keep_alive()
-        bot.run(token)
-    except discord.LoginFailure:
-        print("❌ فشل في تسجيل الدخول! تأكد من صحة التوكن.")
-    except Exception as e:
-        print(f"❌ خطأ في تشغيل البوت: {e}")
+keep_alive()
+
+bot.run(token)
