@@ -646,7 +646,7 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
         turn += 1
         
         # حد أقصى للجولات لتجنب المعارك اللا نهائية
-    if turn > 20:
+        if turn > 20:
             battle_log.append("⏰ المعركة طويلة جداً! انتهت بالتعادل.")
             break
 victory = boss_hp <= 0 and player_hp > 0
