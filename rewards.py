@@ -1,51 +1,6 @@
 
 import random
 
-# ====== مكافآت الألعاب ======
-GAME_REWARDS = {
-    "حجر_ورقة_مقص": {
-        "win": 2000,
-        "draw": 500,
-        "lose": 100
-    },
-    "تخمين": {
-        "win_base": 5000,
-        "win_per_attempt": 1000,
-        "lose": 300
-    },
-    "ذاكرة": {
-        "win": 3000,
-        "lose": 300
-    },
-    "رياضيات": {
-        "win": 1500,
-        "lose": 200
-    },
-    "كلمات": {
-        "win": 2500,
-        "lose": 250
-    }
-}
-
-# ====== مكافآت العمل حسب المهنة ======
-JOB_REWARDS = {
-    "مواطن": {"dollars": (60000, 90000), "gold": 0},
-    "رسام": {"dollars": (60000, 90000), "gold": 0},
-    "مدرب": {"dollars": (60000, 90000), "gold": 0},
-    "مقدم": {"dollars": (40000, 60000), "gold": (10, 20)},
-    "جنيرال": {"dollars": (40000, 60000), "gold": (10, 20)},
-    "وزير": {"dollars": (40000, 60000), "gold": (10, 20)},
-    "ملك": {"dollars": 0, "gold": (20, 40)},
-    "إمبراطور": {"dollars": 0, "gold": (20, 40)}
-}
-
-# ====== المكافأة اليومية ======
-DAILY_REWARD = {
-    "دولار": 100000,
-    "ذهب": 10,
-    "ماس": 1
-}
-
 # ====== مكافآت الزراعة ======
 FARMING_REWARDS = {
     "🌾 قمح": {"min": 1000, "max": 3000},
@@ -65,44 +20,58 @@ FISHING_REWARDS = {
     "🦀": {"name": "سلطعون", "min": 8000, "max": 20000}
 }
 
-# ====== دوال حساب المكافآت ======
+# ====== المكافآت اليومية ======
+DAILY_REWARD = {
+    "دولار": 100000,
+    "ذهب": 25,
+    "ماس": 1,
+    "experience": 200
+}
 
-def calculate_work_reward(job_title):
-    """حساب مكافأة العمل حسب المهنة"""
-    if job_title not in JOB_REWARDS:
-        job_title = "مواطن"
-    
-    reward_info = JOB_REWARDS[job_title]
-    dollars = 0
-    gold = 0
-    
-    if reward_info["dollars"] != 0:
-        dollars = random.randint(*reward_info["dollars"])
-    
-    if reward_info["gold"] != 0:
-        gold = random.randint(*reward_info["gold"])
-    
-    return {"دولار": dollars, "ذهب": gold}
+# ====== مكافآت الألعاب ======
+GAME_REWARDS = {
+    "حجر_ورقة_مقص": {
+        "win": 2000,
+        "lose": 100,
+        "draw": 500
+    },
+    "تخمين": {
+        "base": 8000,
+        "bonus_per_attempt": 500,
+        "consolation": 500
+    },
+    "ذاكرة": {
+        "success": 3000,
+        "fail": 300
+    },
+    "رياضيات": {
+        "correct": 1500,
+        "wrong": 200
+    },
+    "كلمات": {
+        "correct": 2500,
+        "wrong": 250
+    }
+}
 
-def calculate_game_reward(game_name, result, extra_data=None):
-    """حساب مكافأة الألعاب حسب النتيجة"""
-    if game_name not in GAME_REWARDS:
-        return 0
-    
-    rewards = GAME_REWARDS[game_name]
-    
-    if game_name == "تخمين" and result == "win" and extra_data:
-        attempts_left = extra_data.get("attempts_left", 0)
-        return rewards["win_base"] + (attempts_left * rewards["win_per_attempt"])
-    
-    return rewards.get(result, 0)
+# ====== مكافآت الوظائف ======
+JOB_REWARDS = {
+    "مواطن": {"دولار": [60000, 90000], "ذهب": [0, 0]},
+    "رسام": {"دولار": [60000, 90000], "ذهب": [0, 0]},
+    "طبيب": {"دولار": [60000, 90000], "ذهب": [0, 0]},
+    "مقدم": {"دولار": [40000, 60000], "ذهب": [10, 20]},
+    "جنيرال": {"دولار": [40000, 60000], "ذهب": [10, 20]},
+    "وزير": {"دولار": [40000, 60000], "ذهب": [10, 20]},
+    "ملك": {"دولار": [0, 0], "ذهب": [20, 40]},
+    "إمبراطور": {"دولار": [0, 0], "ذهب": [20, 40]}
+}
 
-def calculate_farming_reward(crop_name):
+def calculate_farming_reward(crop_emoji):
     """حساب مكافأة الزراعة"""
-    if crop_name not in FARMING_REWARDS:
+    if crop_emoji not in FARMING_REWARDS:
         return 0
     
-    reward_info = FARMING_REWARDS[crop_name]
+    reward_info = FARMING_REWARDS[crop_emoji]
     return random.randint(reward_info["min"], reward_info["max"])
 
 def calculate_fishing_reward(fish_emoji):
@@ -146,21 +115,89 @@ def calculate_investment_result(amount):
 # ====== مكافآت الاختصاصات ======
 def calculate_specialization_bonus(spec_type, spec_rank, base_amount):
     """حساب مكافأة الاختصاص"""
-    if spec_type == "نينجا":
-        # نينجا يحصل على مكافأة نهب إضافية
-        rank_multipliers = {"نبيل": 1.2, "شجاع": 1.4, "فارسي": 1.6, "أسطوري": 1.8}
-        multiplier = rank_multipliers.get(spec_rank, 1.2)
-        return int(base_amount * multiplier)
+    bonuses = {
+        "محارب": 1.2,
+        "شامان": 1.0,
+        "نينجا": 1.4,
+        "سورا": 1.1
+    }
     
-    return base_amount
+    base_bonus = bonuses.get(spec_type, 1.0)
+    rank_bonus = 1 + (spec_rank - 1) * 0.1
+    
+    return int(base_amount * base_bonus * rank_bonus)
 
-# ====== مكافآت النشاطات الخاصة ======
-SPECIAL_ACTIVITY_REWARDS = {
-    "first_login": {"دولار": 50000, "ذهب": 5, "ماس": 0},
-    "weekly_bonus": {"دولار": 500000, "ذهب": 50, "ماس": 5},
-    "monthly_bonus": {"دولار": 2000000, "ذهب": 200, "ماس": 20}
+def get_game_reward(game_type, result):
+    """حساب مكافأة الألعاب"""
+    game_rewards = GAME_REWARDS.get(game_type, {})
+    return game_rewards.get(result, 0)
+
+def calculate_work_reward(job_title):
+    """حساب مكافأة العمل"""
+    job_reward = JOB_REWARDS.get(job_title, JOB_REWARDS["مواطن"])
+    
+    dollars = random.randint(*job_reward["دولار"])
+    gold = random.randint(*job_reward["ذهب"])
+    
+    return {"دولار": dollars, "ذهب": gold}
+
+def get_level_bonus(user_level):
+    """حساب مكافأة المستوى"""
+    if user_level >= 50:
+        return {"multiplier": 2.0, "bonus_exp": 500}
+    elif user_level >= 25:
+        return {"multiplier": 1.5, "bonus_exp": 300}
+    elif user_level >= 10:
+        return {"multiplier": 1.2, "bonus_exp": 150}
+    else:
+        return {"multiplier": 1.0, "bonus_exp": 0}
+
+def calculate_streak_bonus(streak_days):
+    """حساب مكافأة الاستمرارية"""
+    if streak_days >= 30:
+        return {"multiplier": 3.0, "bonus_diamonds": 5}
+    elif streak_days >= 14:
+        return {"multiplier": 2.0, "bonus_diamonds": 3}
+    elif streak_days >= 7:
+        return {"multiplier": 1.5, "bonus_diamonds": 1}
+    else:
+        return {"multiplier": 1.0, "bonus_diamonds": 0}
+
+# ====== مكافآت خاصة ======
+SPECIAL_REWARDS = {
+    "first_win": {"دولار": 50000, "ذهب": 10, "ماس": 2},
+    "perfect_score": {"دولار": 100000, "ذهب": 25, "ماس": 3},
+    "weekly_achievement": {"دولار": 200000, "ذهب": 50, "ماس": 5},
+    "monthly_champion": {"دولار": 1000000, "ذهب": 200, "ماس": 20}
 }
 
-def get_special_reward(activity_type):
-    """الحصول على مكافأة نشاط خاص"""
-    return SPECIAL_ACTIVITY_REWARDS.get(activity_type, {"دولار": 0, "ذهب": 0, "ماس": 0})
+def get_special_reward(reward_type):
+    """الحصول على مكافأة خاصة"""
+    return SPECIAL_REWARDS.get(reward_type, {})
+
+def calculate_total_wealth(balance):
+    """حساب الثروة الإجمالية"""
+    dollars = balance.get("دولار", 0)
+    gold = balance.get("ذهب", 0)
+    diamonds = balance.get("ماس", 0)
+    
+    # قيم التحويل
+    return dollars + (gold * 50) + (diamonds * 100)
+
+def format_reward_message(rewards):
+    """تنسيق رسالة المكافآت"""
+    message_parts = []
+    
+    if "دولار" in rewards and rewards["دولار"] > 0:
+        message_parts.append(f"💵 {rewards['دولار']:,} دولار")
+    
+    if "ذهب" in rewards and rewards["ذهب"] > 0:
+        message_parts.append(f"🪙 {rewards['ذهب']:,} ذهب")
+    
+    if "ماس" in rewards and rewards["ماس"] > 0:
+        message_parts.append(f"💎 {rewards['ماس']:,} ماس")
+    
+    if "experience" in rewards and rewards["experience"] > 0:
+        message_parts.append(f"⭐ {rewards['experience']:,} خبرة")
+    
+    return " | ".join(message_parts) if message_parts else "لا توجد مكافآت"
