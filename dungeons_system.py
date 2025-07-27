@@ -520,44 +520,39 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
     """محاكاة معركة السرداب المحسنة مع قدرات الزعماء"""
     dungeon = DUNGEONS[dungeon_name]
     battle_log = []
-    
+
     # إحصائيات الزعيم
     boss_hp = dungeon["boss_hp"]
     boss_max_hp = boss_hp
     boss_attack = dungeon["boss_attack"]
     boss_defense = dungeon["boss_defense"]
     boss_abilities = dungeon.get("boss_abilities", [])
-    
-    # حالات خاصة للزعيم
+
     boss_status = {
         "rage_mode": False,
         "shield_active": False,
         "ability_cooldown": 0
     }
-    
+
     # إحصائيات اللاعب
     player_hp = player_stats["hp"]
     player_max_hp = player_hp
     player_attack = player_stats["attack"]
     player_defense = player_stats["defense"]
     spec_type = player_stats["specialization"]
-    
+
     battle_log.append("⚔️ بدء المعركة!")
     battle_log.append(f"🛡️ أنت: {player_hp} HP | ⚔️ {player_attack} ATK | 🛡️ {player_defense} DEF")
     battle_log.append(f"👹 {dungeon['boss']}: {boss_hp} HP | ⚔️ {boss_attack} ATK | 🛡️ {boss_defense} DEF")
     battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    
+
     turn = 1
-    
+
     while player_hp > 0 and boss_hp > 0:
         battle_log.append(f"🎯 الجولة {turn}")
-        
-        # هجوم اللاعب
         damage_to_boss = max(1, player_attack - boss_defense)
-        
-        # قدرات خاصة بالاختصاص
         special_happened = False
-        
+
         if spec_type == "محارب" and random.random() < 0.15:
             damage_to_boss *= 2
             battle_log.append("💥 ضربة قاتلة! الضرر مضاعف!")
@@ -568,26 +563,24 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
             special_happened = True
         elif spec_type == "سورا" and random.random() < 0.20:
             reflected_damage = damage_to_boss // 4
-            battle_log.append(f"🔮 عكس الضرر! الزعيم تلقى {reflected_damage} ضرر إضافي!")
             damage_to_boss += reflected_damage
+            battle_log.append(f"🔮 عكس الضرر! الزعيم تلقى {reflected_damage} ضرر إضافي!")
             special_happened = True
-        
+
         boss_hp -= damage_to_boss
         battle_log.append(f"⚔️ أنت تهاجم: -{damage_to_boss} HP للزعيم (متبقي: {max(0, boss_hp)})")
-        
+
         if boss_hp <= 0:
             break
-        
-        # هجوم الزعيم مع قدرات خاصة
+
         base_damage = max(1, boss_attack - player_defense)
-        
-        # فحص قدرات الزعيم الخاصة
         boss_used_ability = False
+
         if boss_abilities and boss_status["ability_cooldown"] <= 0 and random.random() < 0.3:
             ability = random.choice(boss_abilities)
             boss_status["ability_cooldown"] = 3
             boss_used_ability = True
-            
+
             if "صاعقة الغضب" in ability:
                 base_damage = int(base_damage * 1.5)
                 battle_log.append(f"⚡ {ability}! الضرر مضاعف!")
@@ -599,112 +592,100 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
                 battle_log.append(f"🔥 {ability}! هجوم مدمر!")
             elif "نظرة الجنون" in ability:
                 if random.random() < 0.5:
-                    battle_log.append(f"👁️ {ability}! تجمدت من الرعب لجولة واحدة!")
                     player_hp -= base_damage
+                    battle_log.append(f"👁️ {ability}! تجمدت من الرعب لجولة واحدة!")
                     battle_log.append(f"👹 الزعيم يهاجم بلا مقاومة: -{base_damage} HP")
                     turn += 1
                     continue
-        
-        # تقليل تبريد القدرات
+
         if boss_status["ability_cooldown"] > 0:
             boss_status["ability_cooldown"] -= 1
-        
-        # وضع الغضب عند انخفاض الصحة
+
         if boss_hp < boss_max_hp * 0.3 and not boss_status["rage_mode"]:
             boss_status["rage_mode"] = True
             boss_attack = int(boss_attack * 1.3)
             battle_log.append("😡 الزعيم دخل في وضع الغضب! هجومه زاد بنسبة 30%!")
-        
-        # حساب الضرر النهائي للاعب
+
         final_damage = base_damage
-        
-        # تقليل الضرر إذا كان الدرع نشطاً
+
         if boss_status["shield_active"]:
             final_damage = int(final_damage * 0.7)
             boss_status["shield_active"] = False
-        
-        # قدرة التجنب للنينجا
+
         if spec_type == "نينجا" and random.random() < 0.25:
             battle_log.append("💨 تجنبت الهجوم بخفة النينجا!")
         else:
-            # قدرة عكس الضرر لسورا
             if spec_type == "سورا" and random.random() < 0.30:
                 reflected = final_damage // 3
                 boss_hp -= reflected
                 battle_log.append(f"🔮 عكست جزءاً من الضرر: -{reflected} HP للزعيم")
-            
+
             player_hp -= final_damage
             battle_log.append(f"👹 الزعيم يهاجم: -{final_damage} HP لك (متبقي: {max(0, player_hp)})")
-        
-        # شفاء الشامان
+
         if spec_type == "شامان" and player_hp > 0:
             heal_amount = max(1, player_max_hp // 10)
             player_hp = min(player_max_hp, player_hp + heal_amount)
             battle_log.append(f"✨ شفاء ذاتي: +{heal_amount} HP")
-        
+
         battle_log.append("─────────────────────────────────────────────────")
         turn += 1
-        
-        # حد أقصى للجولات لتجنب المعارك اللا نهائية
+
         if turn > 20:
             battle_log.append("⏰ المعركة طويلة جداً! انتهت بالتعادل.")
             break
-victory = boss_hp <= 0 and player_hp > 0
-if victory:
+
+    victory = boss_hp <= 0 and player_hp > 0
+
+    if victory:
         battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         battle_log.append(f"🎉 **النصر!** هزمت {dungeon['boss']}!")
-        
-        # حساب المكافآت المحسنة
-rewards = {}
-# المكافآت الأساسية
-gold_reward = random.randint(*dungeon["rewards"]["ذهب"])
-dollar_reward = random.randint(*dungeon["rewards"]["دولار"])
-exp_reward = random.randint(*dungeon["rewards"].get("experience", [100, 200]))
 
-# مكافآت إضافية حسب الأداء
-performance_bonus = 1.0
-if player_hp > player_max_hp * 0.8:
-    performance_bonus = 1.5
-    battle_log.append("🌟 أداء ممتاز! مكافآت مضاعفة!")
-elif player_hp > player_max_hp * 0.5:
-    performance_bonus = 1.2
-    battle_log.append("⭐ أداء جيد! مكافأة إضافية!")
+        rewards = {}
+        gold_reward = random.randint(*dungeon["rewards"]["ذهب"])
+        dollar_reward = random.randint(*dungeon["rewards"]["دولار"])
+        exp_reward = random.randint(*dungeon["rewards"].get("experience", [100, 200]))
 
-rewards["ذهب"] = int(gold_reward * performance_bonus)
-rewards["دولار"] = int(dollar_reward * performance_bonus)
-rewards["experience"] = int(exp_reward * performance_bonus)
+        performance_bonus = 1.0
+        if player_hp > player_max_hp * 0.8:
+            performance_bonus = 1.5
+            battle_log.append("🌟 أداء ممتاز! مكافآت مضاعفة!")
+        elif player_hp > player_max_hp * 0.5:
+            performance_bonus = 1.2
+            battle_log.append("⭐ أداء جيد! مكافأة إضافية!")
 
-# فرصة الحصول على قطع نادرة من السرداب
-rare_drops = dungeon.get("rare_drops", {})
-obtained_rares = []
+        rewards["ذهب"] = int(gold_reward * performance_bonus)
+        rewards["دولار"] = int(dollar_reward * performance_bonus)
+        rewards["experience"] = int(exp_reward * performance_bonus)
 
-for item_name, drop_chance in rare_drops.items():
-    if random.random() < drop_chance:
-        obtained_rares.append(item_name)
-        battle_log.append(f"✨ حصلت على قطعة نادرة: {item_name}!")
+        rare_drops = dungeon.get("rare_drops", {})
+        obtained_rares = []
 
-if obtained_rares:
-    rewards["rare_items"] = obtained_rares
+        for item_name, drop_chance in rare_drops.items():
+            if random.random() < drop_chance:
+                obtained_rares.append(item_name)
+                battle_log.append(f"✨ حصلت على قطعة نادرة: {item_name}!")
 
-# مكافأة خاصة للسراديب عالية المستوى
-if dungeon["level"] >= 5:
-    if random.random() < 0.1:  # 10% فرصة
-        bonus_diamonds = random.randint(5, 15)
-        rewards["ماس"] = bonus_diamonds
-        battle_log.append(f"💎 مكافأة خاصة: {bonus_diamonds} ماس!")
+        if obtained_rares:
+            rewards["rare_items"] = obtained_rares
 
-# مكافأة الإنجاز الأول
-progress = get_user_dungeon_progress(player_stats.get("user_id", ""))
-if dungeon_name not in progress.get("completed_dungeons", []):
-    rewards["first_completion_bonus"] = True
-    rewards["ذهب"] = int(rewards["ذهب"] * 2)
-    battle_log.append("🎉 مكافأة الإنجاز الأول! مضاعفة الذهب!")
-    battle_log.append(f"💰 المكافآت: {gold_reward} ذهب، {dollar_reward:,} دولار")
+        if dungeon["level"] >= 5:
+            if random.random() < 0.1:
+                bonus_diamonds = random.randint(5, 15)
+                rewards["ماس"] = bonus_diamonds
+                battle_log.append(f"💎 مكافأة خاصة: {bonus_diamonds} ماس!")
 
-else:
-    battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        progress = get_user_dungeon_progress(player_stats.get("user_id", ""))
+        if dungeon_name not in progress.get("completed_dungeons", []):
+            rewards["first_completion_bonus"] = True
+            rewards["ذهب"] = int(rewards["ذهب"] * 2)
+            battle_log.append("🎉 مكافأة الإنجاز الأول! مضاعفة الذهب!")
 
-battle_log.append("💀 **الهزيمة!** لم تتمكن من هزيمة الزعيم.")
-battle_log.append("💡 حاول تحسين عتادك أو رفع مستواك.")
-rewards = None
-  return victory, battle_log, rewards
+        battle_log.append(f"💰 المكافآت: {rewards['ذهب']} ذهب، {rewards['دولار']:,} دولار")
+    else:
+        battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        battle_log.append("💀 **الهزيمة!** لم تتمكن من هزيمة الزعيم.")
+        battle_log.append("💡 حاول تحسين عتادك أو رفع مستواك.")
+        rewards = None
+
+    return victory, battle_log, rewards
