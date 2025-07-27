@@ -652,8 +652,7 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
 
 
 victory = boss_hp <= 0 and player_hp > 0
-   
-    if victory:
+   if victory:
         battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         battle_log.append(f"🎉 **النصر!** هزمت {dungeon['boss']}!")
         
@@ -709,9 +708,7 @@ else:
     battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 battle_log.append("💀 **الهزيمة!** لم تتمكن من هزيمة الزعيم.")
-
-715:        battle_log.append("💡 حاول تحسين عتادك أو رفع مستواك.")
-716:        rewards = None
-717:    
-718:    return victory, battle_log, rewards
-``````python
+battle_log.append("💡 حاول تحسين عتادك أو رفع مستواك.")
+    rewards = None
+    
+return victory, battle_log, rewards
