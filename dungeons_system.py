@@ -649,66 +649,67 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
         if turn > 20:
             battle_log.append("⏰ المعركة طويلة جداً! انتهت بالتعادل.")
             break
-655:    
-656:    # تحديد النتيجة
-657:    victory = boss_hp <= 0 and player_hp > 0
-658:    
-659:    if victory:
-660:        battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-661:        battle_log.append(f"🎉 **النصر!** هزمت {dungeon['boss']}!")
-662:        
-663:        # حساب المكافآت المحسنة
-664:        rewards = {}
-665:        
-666:        # المكافآت الأساسية
-667:        gold_reward = random.randint(*dungeon["rewards"]["ذهب"])
-668:        dollar_reward = random.randint(*dungeon["rewards"]["دولار"])
-669:        exp_reward = random.randint(*dungeon["rewards"].get("experience", [100, 200]))
-670:        
-671:        # مكافآت إضافية حسب الأداء
-672:        performance_bonus = 1.0
-673:        if player_hp > player_max_hp * 0.8:
-674:            performance_bonus = 1.5
-675:            battle_log.append("🌟 أداء ممتاز! مكافآت مضاعفة!")
-676:        elif player_hp > player_max_hp * 0.5:
-677:            performance_bonus = 1.2
-678:            battle_log.append("⭐ أداء جيد! مكافأة إضافية!")
-679:        
-680:        rewards["ذهب"] = int(gold_reward * performance_bonus)
-681:        rewards["دولار"] = int(dollar_reward * performance_bonus)
-682:        rewards["experience"] = int(exp_reward * performance_bonus)
-683:        
-684:        # فرصة الحصول على قطع نادرة من السرداب
-685:        rare_drops = dungeon.get("rare_drops", {})
-686:        obtained_rares = []
-687:        
-688:        for item_name, drop_chance in rare_drops.items():
-689:            if random.random() < drop_chance:
-690:                obtained_rares.append(item_name)
-691:                battle_log.append(f"✨ حصلت على قطعة نادرة: {item_name}!")
-692:        
-693:        if obtained_rares:
-694:            rewards["rare_items"] = obtained_rares
-695:        
-696:        # مكافأة خاصة للسراديب عالية المستوى
-697:        if dungeon["level"] >= 5:
-698:            if random.random() < 0.1:  # 10% فرصة
-699:                bonus_diamonds = random.randint(5, 15)
-700:                rewards["ماس"] = bonus_diamonds
-701:                battle_log.append(f"💎 مكافأة خاصة: {bonus_diamonds} ماس!")
-702:        
-703:        # مكافأة الإنجاز الأول
-704:        progress = get_user_dungeon_progress(player_stats.get("user_id", ""))
-705:        if dungeon_name not in progress.get("completed_dungeons", []):
-706:            rewards["first_completion_bonus"] = True
-707:            rewards["ذهب"] = int(rewards["ذهب"] * 2)
-708:            battle_log.append("🎉 مكافأة الإنجاز الأول! مضاعفة الذهب!")
-709:        
-710:        battle_log.append(f"💰 المكافآت: {gold_reward} ذهب، {dollar_reward:,} دولار")
-711:        
-712:    else:
-713:        battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-714:        battle_log.append("💀 **الهزيمة!** لم تتمكن من هزيمة الزعيم.")
+
+
+victory = boss_hp <= 0 and player_hp > 0
+   
+    if victory:
+        battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+        battle_log.append(f"🎉 **النصر!** هزمت {dungeon['boss']}!")
+        
+        # حساب المكافآت المحسنة
+      rewards = {}
+# المكافآت الأساسية
+gold_reward = random.randint(*dungeon["rewards"]["ذهب"])
+dollar_reward = random.randint(*dungeon["rewards"]["دولار"])
+exp_reward = random.randint(*dungeon["rewards"].get("experience", [100, 200]))
+
+# مكافآت إضافية حسب الأداء
+performance_bonus = 1.0
+if player_hp > player_max_hp * 0.8:
+    performance_bonus = 1.5
+    battle_log.append("🌟 أداء ممتاز! مكافآت مضاعفة!")
+elif player_hp > player_max_hp * 0.5:
+    performance_bonus = 1.2
+    battle_log.append("⭐ أداء جيد! مكافأة إضافية!")
+
+rewards["ذهب"] = int(gold_reward * performance_bonus)
+rewards["دولار"] = int(dollar_reward * performance_bonus)
+rewards["experience"] = int(exp_reward * performance_bonus)
+
+# فرصة الحصول على قطع نادرة من السرداب
+rare_drops = dungeon.get("rare_drops", {})
+obtained_rares = []
+
+for item_name, drop_chance in rare_drops.items():
+    if random.random() < drop_chance:
+        obtained_rares.append(item_name)
+        battle_log.append(f"✨ حصلت على قطعة نادرة: {item_name}!")
+
+if obtained_rares:
+    rewards["rare_items"] = obtained_rares
+
+# مكافأة خاصة للسراديب عالية المستوى
+if dungeon["level"] >= 5:
+    if random.random() < 0.1:  # 10% فرصة
+        bonus_diamonds = random.randint(5, 15)
+        rewards["ماس"] = bonus_diamonds
+        battle_log.append(f"💎 مكافأة خاصة: {bonus_diamonds} ماس!")
+
+# مكافأة الإنجاز الأول
+progress = get_user_dungeon_progress(player_stats.get("user_id", ""))
+if dungeon_name not in progress.get("completed_dungeons", []):
+    rewards["first_completion_bonus"] = True
+    rewards["ذهب"] = int(rewards["ذهب"] * 2)
+    battle_log.append("🎉 مكافأة الإنجاز الأول! مضاعفة الذهب!")
+
+battle_log.append(f"💰 المكافآت: {gold_reward} ذهب، {dollar_reward:,} دولار")
+
+else:
+    battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+
+battle_log.append("💀 **الهزيمة!** لم تتمكن من هزيمة الزعيم.")
+
 715:        battle_log.append("💡 حاول تحسين عتادك أو رفع مستواك.")
 716:        rewards = None
 717:    
