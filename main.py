@@ -2582,7 +2582,10 @@ async def handle_farm_status_command(message):
     embed = discord.Embed(title="🌾 حالة المزرعة", description=desc, color=0xC4F1BE)
     await message.channel.send(embed=embed, view=view)
 # ----------------------------------------- نظام المهام والخبرة -------------------------------------
-
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
 if message.content.strip().lower() == "مهام":
         ctx = await bot.get_context(message)
         user_id = str(message.author.id)
