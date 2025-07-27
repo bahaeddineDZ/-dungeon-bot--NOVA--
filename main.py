@@ -863,16 +863,26 @@ async def on_ready():
         print("📚 تم تفعيل نظام الشروحات المطور")
         
         # تفعيل نظام المتجر المطور
-        setup_shop_commands(bot)
-        print("🏪 تم تفعيل نظام المتجر المطور")
+        try:
+            setup_shop_commands(bot)
+            print("🏪 تم تفعيل نظام المتجر المطور")
+        except Exception as e:
+            print(f"⚠️ خطأ في تفعيل نظام المتجر: {e}")
         
         # تفعيل نظام الزواج
-        setup_marriage_commands(bot)
-        print("💍 تم تفعيل نظام الزواج")
+        try:
+            setup_marriage_commands(bot)
+            print("💍 تم تفعيل نظام الزواج")
+        except Exception as e:
+            print(f"⚠️ خطأ في تفعيل نظام الزواج: {e}")
         
         # تفعيل الألعاب الجديدة
-        setup_new_games(bot)
-        print("🎮 تم تفعيل الألعاب الجديدة")
+        try:
+            setup_new_games(bot)
+            print("🎮 تم تفعيل الألعاب الجديدة")
+        except Exception as e:
+            print(f"⚠️ خطأ في تفعيل الألعاب الجديدة: {e}")
+            print("💡 تأكد من وجود جميع الوحدات المطلوبة")
     except Exception as e:
         print(f"❌ خطأ في تهيئة الأنظمة: {e}")
         
@@ -4944,17 +4954,8 @@ async def dungeon_stats(ctx):
 
 
 # -------------------------- تشغيل البوت --------------------------
-token = os.getenv("DISCORD_TOKEN")
 
-if not token:
-    print("❌ لم يتم العثور على التوكن في البيئة!")
-    exit(1)
-else:
-    print(f"✅ تم تحميل التوكن بنجاح، طوله: {len(token)}")
-
-
-
-# معالج أخطاء عام
+# معالج أخطاء عام محسن
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
@@ -4970,17 +4971,49 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ البوت لا يملك الصلاحيات المطلوبة.")
     elif isinstance(error, commands.UserInputError):
         await ctx.send(f"❌ خطأ في المدخلات. تحقق من صيغة الأمر `{ctx.command.name}`.")
+    elif isinstance(error, AttributeError) and "tasks_system" in str(error):
+        await ctx.send("⚠️ نظام المهام غير متاح حالياً. جرب لاحقاً.")
     else:
         print(f"خطأ غير متوقع في الأمر {ctx.command}: {error}")
-        await ctx.send(f"❌ حدث خطأ في الأمر `{ctx.command.name if ctx.command else 'غير محدد'}`. يرجى المحاولة لاحقاً.")
-token = os.getenv("DISCORD_TOKEN")
+        await ctx.send("❌ حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.")
 
-if not token:
-    print("❌ لم يتم العثور على التوكن! تحقق من متغيرات البيئة في Render.")
-    exit(1)
-else:
-    print(f"✅ تم العثور على التوكن بطول: {len(token)} حرف")
+# جلب التوكن مع معالجة أفضل للأخطاء
+def get_bot_token():
+    """جلب توكن البوت من متغيرات البيئة أو الملف"""
+    # محاولة جلب التوكن من متغيرات البيئة
+    token = os.getenv("DISCORD_TOKEN")
+    
+    if not token:
+        # محاولة جلب التوكن من ملف .env إذا كان موجوداً
+        try:
+            with open('.env', 'r') as f:
+                for line in f:
+                    if line.startswith('DISCORD_TOKEN='):
+                        token = line.split('=', 1)[1].strip()
+                        break
+        except FileNotFoundError:
+            pass
+    
+    return token
 
-keep_alive()
-
-bot.run(token)
+# تشغيل البوت
+if __name__ == "__main__":
+    token = get_bot_token()
+    
+    if not token:
+        print("❌ لم يتم العثور على DISCORD_TOKEN!")
+        print("💡 تأكد من إضافة الرمز المميز في:")
+        print("   • متغيرات البيئة (Environment Variables)")
+        print("   • ملف .env في المجلد الرئيسي")
+        print("   • تبويب Secrets في Replit")
+        exit(1)
+    
+    print(f"✅ تم العثور على التوكن بنجاح (طول: {len(token)} حرف)")
+    
+    try:
+        keep_alive()
+        bot.run(token)
+    except discord.LoginFailure:
+        print("❌ فشل في تسجيل الدخول! تأكد من صحة التوكن.")
+    except Exception as e:
+        print(f"❌ خطأ في تشغيل البوت: {e}")

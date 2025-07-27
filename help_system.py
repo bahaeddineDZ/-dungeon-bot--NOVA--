@@ -141,15 +141,36 @@ class DetailedHelpView(View):
         self.help_system = help_system
         self.current_page = 0
 
-        # إضافة أزرار الفئات مع تنسيق أفضل
+        # إضافة أزرار الفئات مع تنسيق محسن
         categories = list(help_system.help_categories.items())
+        
+        # الصف الأول - الأوامر الأساسية
+        essential_categories = ["اقتصاد", "متجر", "قتال"]
         for i, (category, info) in enumerate(categories):
-            row = i // 3  # 3 أزرار في كل صف
-            self.add_item(CategoryButton(category, info, help_system, row))
-
-        # إضافة أزرار التنقل
-        self.add_item(NavigationButton("🏠", "الصفحة الرئيسية", help_system, 3))
-        self.add_item(SearchButton("🔍", "بحث سريع", help_system, 3))
+            if category in essential_categories:
+                self.add_item(CategoryButton(category, info, help_system, 0))
+        
+        # الصف الثاني - الألعاب والأنشطة
+        activity_categories = ["ألعاب", "زراعة", "صيد"]
+        for i, (category, info) in enumerate(categories):
+            if category in activity_categories:
+                self.add_item(CategoryButton(category, info, help_system, 1))
+        
+        # الصف الثالث - الميزات المتقدمة
+        advanced_categories = ["زواج", "سراديب", "مهام"]
+        for i, (category, info) in enumerate(categories):
+            if category in advanced_categories:
+                self.add_item(CategoryButton(category, info, help_system, 2))
+        
+        # الصف الرابع - الإحصائيات والأدوات
+        for i, (category, info) in enumerate(categories):
+            if category == "إحصائيات":
+                self.add_item(CategoryButton(category, info, help_system, 3))
+        
+        # الصف الخامس - أزرار التنقل
+        self.add_item(NavigationButton("🏠", "الرئيسية", help_system, 4))
+        self.add_item(SearchButton("🔍", "بحث", help_system, 4))
+        self.add_item(QuickStartButton("🚀", "دليل سريع", help_system, 4))
 
 class CategoryButton(Button):
     def __init__(self, category, info, help_system, row):
@@ -231,14 +252,14 @@ class CategoryButton(Button):
             "مبارزة": "مبارزة سريعة بدون مراهنة",
 
             # ألعاب
-            "حجر_ورقة_مقص": "اللعبة الكلاسيكية مع مكافآت مميزة",
-            "تخمين": "خمن رقم من 1-100 في 15 محاولة",
-            "ذاكرة": "احفظ تسلسل من 4 رموز",
-            "رياضيات": "حل معادلات رياضية بسرعة",
-            "كلمات": "رتب الأحرف لتكوين كلمة صحيحة",
-            "لوتو": "العب لوتو برقام محظوظة",
-            "روليت": "روليت كازينو حقيقي",
-            "بلاك_جاك": "لعبة الورق الشهيرة",
+            "حجر_ورقة_مقص": "اللعبة الكلاسيكية - فوز: 2000$، خسارة: 500$",
+            "تخمين": "خمن رقم من 1-100 في 15 محاولة - مكافأة تصل 8500$",
+            "ذاكرة": "احفظ تسلسل من 4 رموز لمدة 5 ثوان - مكافأة: 3000$",
+            "رياضيات": "حل معادلات رياضية بسرعة - مكافأة: 1500$",
+            "كلمات": "رتب الأحرف لتكوين كلمة صحيحة - مكافأة: 2500$",
+            "لوتو": "اختر 6 أرقام محظوظة - جائزة كبرى: 1,000,000$",
+            "روليت": "مراهنة على الأرقام والألوان - مضاعفات عالية",
+            "بلاك_جاك": "اقترب من 21 بدون تجاوز - استراتيجة مهمة",
 
             # زراعة
             "مزارع": "اشتر بذور من 5 أنواع مختلفة",
@@ -367,9 +388,61 @@ class NavigationButton(Button):
         view = DetailedHelpView(self.help_system)
         await interaction.response.edit_message(embed=embed, view=view)
 
-class SearchButton(Button):
+class QuickStartButton(Button):
     def __init__(self, emoji, label, help_system, row):
         super().__init__(emoji=emoji, label=label, style=ButtonStyle.success, row=row)
+        self.help_system = help_system
+
+    async def callback(self, interaction: Interaction):
+        embed = Embed(
+            title="🚀 دليل البداية السريع",
+            description="📋 **خطوات البداية للمبتدئين:**",
+            color=0x00ff00
+        )
+        
+        embed.add_field(
+            name="1️⃣ احصل على المال الأولي",
+            value="`يومي` - مكافأة يومية ضخمة\n`عمل` - اعمل واربح أموال\n`ترقية` - ارقِ وظيفتك",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="2️⃣ اختر قوتك الخاصة",
+            value="`اختصاص` - اختر من 4 اختصاصات\n⚔️ محارب | 🔮 شامان | 🥷 نينجا | 🧿 سورا",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="3️⃣ ابدأ الأنشطة",
+            value="`متجر` - تسوق المعدات\n`مزارع` - ابدأ الزراعة\n`صياد` - اشتر طُعم للصيد",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="4️⃣ العب والربح",
+            value="`حجر_ورقة_مقص` - لعبة سريعة\n`تخمين` - خمن رقم من 1-100\n`لوتو` - العب اللوتو",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="5️⃣ تطور وتقدم",
+            value="`زواج` - ابحث عن شريك\n`سراديب` - تحديات صعبة\n`مهام` - أكمل المهام",
+            inline=False
+        )
+        
+        embed.add_field(
+            name="💡 نصائح مهمة",
+            value="• استخدم `رصيد` لمتابعة أموالك\n• `تبريد` لمعرفة وقت الأوامر\n• `حقيبة` لرؤية ممتلكاتك\n• `شروحات` للعودة هنا",
+            inline=False
+        )
+        
+        embed.set_footer(text="🎯 ابدأ بـ `يومي` الآن للحصول على 100,000$ مجاناً!")
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+class SearchButton(Button):
+    def __init__(self, emoji, label, help_system, row):
+        super().__init__(emoji=emoji, label=label, style=ButtonStyle.secondary, row=row)
         self.help_system = help_system
 
     async def callback(self, interaction: Interaction):

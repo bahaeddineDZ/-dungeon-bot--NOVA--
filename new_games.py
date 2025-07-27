@@ -2,13 +2,33 @@
 import discord
 from discord.ext import commands
 from discord import Embed, ButtonStyle, Interaction
-from discord.ui import View, Button, Select
+from discord.ui import View, Button, Select, Modal, TextInput
 import random
 import asyncio
+import time
 
-from data_utils import load_data, save_data, init_user
-from cooldown import check_cooldown, update_cooldown
-from logs_system import logs_system
+# استيراد الوحدات المطلوبة مع معالجة الأخطاء
+try:
+    from data_utils import load_data, save_data, init_user
+    from cooldown import check_cooldown, update_cooldown
+    from logs_system import logs_system
+except ImportError as e:
+    print(f"تحذير: فشل في استيراد بعض الوحدات: {e}")
+    # في حالة فشل الاستيراد، نقوم بإنشاء دوال بديلة مؤقتة
+    def load_data():
+        return {}
+    def save_data(data):
+        pass
+    def init_user(user_id, username):
+        pass
+    def check_cooldown(user_id, command):
+        return True, ""
+    def update_cooldown(user_id, command):
+        pass
+    class logs_system:
+        @staticmethod
+        def add_log(*args):
+            pass
 
 def setup_new_games(bot):
     """إعداد الألعاب الجديدة"""
