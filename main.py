@@ -4830,5 +4830,12 @@ async def on_command_error(ctx, error):
     else:
         print(f"خطأ غير متوقع: {error}")
         await ctx.send("❌ حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.")
+token = os.getenv("DISCORD_TOKEN")
+
+if not token:
+    print("❌ لم يتم العثور على التوكن! تحقق من متغيرات البيئة في Render.")
+    exit(1)
+else:
+    print(f"✅ تم العثور على التوكن بطول: {len(token)} حرف")
 
 bot.run(os.getenv('BOT_TOKEN'))
