@@ -699,8 +699,7 @@ if dungeon_name not in progress.get("completed_dungeons", []):
     rewards["first_completion_bonus"] = True
     rewards["ذهب"] = int(rewards["ذهب"] * 2)
     battle_log.append("🎉 مكافأة الإنجاز الأول! مضاعفة الذهب!")
-
-battle_log.append(f"💰 المكافآت: {gold_reward} ذهب، {dollar_reward:,} دولار")
+    battle_log.append(f"💰 المكافآت: {gold_reward} ذهب، {dollar_reward:,} دولار")
 
 else:
     battle_log.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
