@@ -20,16 +20,32 @@ from tasks_system import tasks_system
 from keep_alive import keep_alive
 from dungeons_system import *
 from help_system import setup_advanced_help
-from marriage_system import setup_marriage_commands
-from new_games import setup_new_games
 
-# استيراد نظام المتجر مع معالجة الأخطاء
+# استيراد أنظمة الألعاب والزواج مع معالجة الأخطاء
+MARRIAGE_AVAILABLE = False
+GAMES_AVAILABLE = False
+SHOP_AVAILABLE = False
+
+try:
+    from marriage_system import setup_marriage_commands
+    MARRIAGE_AVAILABLE = True
+    print("✅ تم تحميل نظام الزواج بنجاح")
+except ImportError as e:
+    print(f"⚠️ فشل في تحميل نظام الزواج: {e}")
+
+try:
+    from new_games import setup_new_games
+    GAMES_AVAILABLE = True
+    print("✅ تم تحميل الألعاب الجديدة بنجاح")
+except ImportError as e:
+    print(f"⚠️ فشل في تحميل الألعاب الجديدة: {e}")
+
 try:
     from shop_system import setup_shop_commands, shop_system
     SHOP_AVAILABLE = True
+    print("✅ تم تحميل نظام المتجر بنجاح")
 except ImportError as e:
-    print(f"تحذير: فشل في تحميل نظام المتجر: {e}")
-    SHOP_AVAILABLE = False
+    print(f"⚠️ فشل في تحميل نظام المتجر: {e}")
 
 # ====== تحسين نظام keep_alive ======
 
@@ -862,19 +878,25 @@ async def on_ready():
             print("⚠️ نظام المتجر غير متاح - تم تخطيه")
         
         # تفعيل نظام الزواج
-        try:
-            setup_marriage_commands(bot)
-            print("💍 تم تفعيل نظام الزواج")
-        except Exception as e:
-            print(f"⚠️ خطأ في تفعيل نظام الزواج: {e}")
+        if MARRIAGE_AVAILABLE:
+            try:
+                setup_marriage_commands(bot)
+                print("💍 تم تفعيل نظام الزواج بنجاح")
+            except Exception as e:
+                print(f"⚠️ خطأ في تفعيل نظام الزواج: {e}")
+        else:
+            print("⚠️ نظام الزواج غير متاح - تم تخطيه")
         
         # تفعيل الألعاب الجديدة
-        try:
-            setup_new_games(bot)
-            print("🎮 تم تفعيل الألعاب الجديدة")
-        except Exception as e:
-            print(f"⚠️ خطأ في تفعيل الألعاب الجديدة: {e}")
-            print("💡 تأكد من وجود جميع الوحدات المطلوبة")
+        if GAMES_AVAILABLE:
+            try:
+                setup_new_games(bot)
+                print("🎮 تم تفعيل الألعاب الجديدة بنجاح")
+            except Exception as e:
+                print(f"⚠️ خطأ في تفعيل الألعاب الجديدة: {e}")
+        else:
+            print("⚠️ الألعاب الجديدة غير متاحة - تم تخطيه")
+            
     except Exception as e:
         print(f"❌ خطأ في تهيئة الأنظمة: {e}")
         
@@ -4839,6 +4861,176 @@ async def dungeon_cooldowns(ctx):
     embed.set_footer(text="💡 التبريد يساعد في توازن اللعبة ويجعل كل معركة مميزة!")
     
     await ctx.send(embed=embed)
+
+# ========== أوامر الألعاب الجديدة (حل احتياطي) ==========
+
+@bot.command(name="لوتو")
+async def lottery_backup(ctx):
+    """لعبة اللوتو البديلة"""
+    user_id = str(ctx.author.id)
+    can_use, time_left = check_cooldown(user_id, "لوتو")
+    if not can_use:
+        await ctx.send(f"⏳ يجب الانتظار {time_left} قبل لعب اللوتو مرة أخرى.")
+        return
+
+    init_user(user_id, ctx.author.display_name)
+    data = load_data()
+    user = data[user_id]
+    
+    ticket_cost = 5000
+    if user["balance"].get("دولار", 0) < ticket_cost:
+        await ctx.send(f"❌ تحتاج إلى {ticket_cost:,} دولار لشراء تذكرة لوتو!")
+        return
+
+    # خصم التكلفة
+    user["balance"]["دولار"] -= ticket_cost
+    
+    # أرقام اللوتو
+    user_numbers = [random.randint(1, 49) for _ in range(6)]
+    winning_numbers = [random.randint(1, 49) for _ in range(6)]
+    
+    # حساب الأرقام المطابقة
+    matches = len(set(user_numbers) & set(winning_numbers))
+    
+    # تحديد الجوائز
+    prizes = {6: 1000000, 5: 100000, 4: 25000, 3: 10000, 2: 5000, 1: 1000, 0: 500}
+    prize = prizes.get(matches, 500)
+    
+    user["balance"]["دولار"] += prize
+    save_data(data)
+    update_cooldown(user_id, "لوتو")
+    
+    embed = discord.Embed(title="🎰 نتائج اللوتو!", color=0xffd700 if matches >= 4 else 0x3498db)
+    embed.add_field(name="🎯 أرقامك", value=" - ".join(map(str, sorted(user_numbers))), inline=False)
+    embed.add_field(name="🏆 الأرقام الفائزة", value=" - ".join(map(str, sorted(winning_numbers))), inline=False)
+    embed.add_field(name="✨ النتيجة", value=f"🎯 {matches} أرقام مطابقة\n💰 ربحت: {prize:,} دولار", inline=True)
+    
+    await ctx.send(embed=embed)
+
+@bot.command(name="روليت")
+async def roulette_backup(ctx):
+    """لعبة الروليت البديلة"""
+    user_id = str(ctx.author.id)
+    can_use, time_left = check_cooldown(user_id, "روليت")
+    if not can_use:
+        await ctx.send(f"⏳ يجب الانتظار {time_left} قبل لعب الروليت مرة أخرى.")
+        return
+
+    embed = discord.Embed(
+        title="🎰 روليت الكازينو",
+        description="اكتب مبلغ المراهنة (مثال: 10000)",
+        color=0xffd700
+    )
+    await ctx.send(embed=embed)
+    
+    def check(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel and msg.content.isdigit()
+    
+    try:
+        msg = await bot.wait_for("message", check=check, timeout=30)
+        bet_amount = int(msg.content)
+        
+        init_user(user_id, ctx.author.display_name)
+        data = load_data()
+        user = data[user_id]
+        
+        if user["balance"].get("دولار", 0) < bet_amount:
+            await ctx.send("❌ لا تملك ما يكفي من المال!")
+            return
+        
+        # دوران الروليت
+        winning_number = random.randint(0, 36)
+        user_guess = random.randint(0, 36)  # رقم عشوائي للمستخدم
+        
+        user["balance"]["دولار"] -= bet_amount
+        
+        if user_guess == winning_number:
+            winnings = bet_amount * 35
+            user["balance"]["دولار"] += winnings
+            result = f"🎉 فوز! الرقم {winning_number} - ربحت {winnings:,} دولار"
+            color = 0x00ff00
+        else:
+            result = f"💔 خسارة! الرقم الفائز كان {winning_number}"
+            color = 0xff0000
+        
+        save_data(data)
+        update_cooldown(user_id, "روليت")
+        
+        embed = discord.Embed(title="🎰 نتائج الروليت", description=result, color=color)
+        await ctx.send(embed=embed)
+        
+    except asyncio.TimeoutError:
+        await ctx.send("⏰ انتهى الوقت!")
+
+@bot.command(name="بلاك_جاك")
+async def blackjack_backup(ctx):
+    """لعبة البلاك جاك البديلة"""
+    user_id = str(ctx.author.id)
+    can_use, time_left = check_cooldown(user_id, "بلاك_جاك")
+    if not can_use:
+        await ctx.send(f"⏳ يجب الانتظار {time_left} قبل لعب البلاك جاك مرة أخرى.")
+        return
+
+    embed = discord.Embed(
+        title="🃏 البلاك جاك",
+        description="اكتب مبلغ المراهنة (مثال: 5000)",
+        color=0x2c3e50
+    )
+    await ctx.send(embed=embed)
+    
+    def check(msg):
+        return msg.author == ctx.author and msg.channel == ctx.channel and msg.content.isdigit()
+    
+    try:
+        msg = await bot.wait_for("message", check=check, timeout=30)
+        bet_amount = int(msg.content)
+        
+        init_user(user_id, ctx.author.display_name)
+        data = load_data()
+        user = data[user_id]
+        
+        if user["balance"].get("دولار", 0) < bet_amount:
+            await ctx.send("❌ لا تملك ما يكفي من المال!")
+            return
+        
+        # لعب مبسط للبلاك جاك
+        player_score = random.randint(17, 21)
+        dealer_score = random.randint(17, 21)
+        
+        user["balance"]["دولار"] -= bet_amount
+        
+        if player_score > 21:
+            result = f"💥 تجاوزت 21 ({player_score})! خسرت"
+            profit = 0
+            color = 0xff0000
+        elif dealer_score > 21:
+            result = f"🎉 الموزع تجاوز 21 ({dealer_score})! ربحت"
+            profit = bet_amount * 2
+            color = 0x00ff00
+        elif player_score > dealer_score:
+            result = f"🏆 فزت! أنت: {player_score}, الموزع: {dealer_score}"
+            profit = bet_amount * 2
+            color = 0x00ff00
+        elif player_score < dealer_score:
+            result = f"💔 خسرت! أنت: {player_score}, الموزع: {dealer_score}"
+            profit = 0
+            color = 0xff0000
+        else:
+            result = f"🤝 تعادل! كلاكما: {player_score}"
+            profit = bet_amount
+            color = 0xf39c12
+        
+        user["balance"]["دولار"] += profit
+        save_data(data)
+        update_cooldown(user_id, "بلاك_جاك")
+        
+        embed = discord.Embed(title="🃏 نتائج البلاك جاك", description=result, color=color)
+        if profit > bet_amount:
+            embed.add_field(name="💰 الربح", value=f"{profit - bet_amount:,} دولار", inline=True)
+        await ctx.send(embed=embed)
+        
+    except asyncio.TimeoutError:
+        await ctx.send("⏰ انتهى الوقت!")
 
 # ========== أوامر المتجر البديلة ==========
 
