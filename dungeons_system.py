@@ -707,5 +707,4 @@ else:
 battle_log.append("💀 **الهزيمة!** لم تتمكن من هزيمة الزعيم.")
 battle_log.append("💡 حاول تحسين عتادك أو رفع مستواك.")
 rewards = None
-    
-return victory, battle_log, rewards
+  return victory, battle_log, rewards
