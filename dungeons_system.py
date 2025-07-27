@@ -694,7 +694,7 @@ def simulate_dungeon_battle(player_stats, dungeon_name):
 
         # مكافأة خاصة للسراديب عالية المستوى
         if dungeon["level"] >= 5:
-            if random.random() < 0.1:  ```python
+            if random.random() < 0.1:
 # 10% فرصة
                 bonus_diamonds = random.randint(5, 15)
                 rewards["ماس"] = bonus_diamonds
