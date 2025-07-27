@@ -22,6 +22,27 @@ from dungeons_system import *
 from help_system import setup_advanced_help
 from shop_system import setup_shop_commands
 
+# ====== live======
+
+
+from flask import Flask
+from threading import Thread
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "✅ البوت يعمل"
+
+def run_web():
+    app.run(host='0.0.0.0', port=5000)
+
+def keep_alive():
+    t = Thread(target=run_web)
+    t.start()
+# ====== live======
+
+
 # ====== bot setup ======
 intents = discord.Intents.default()
 intents.message_content = True
@@ -4841,5 +4862,7 @@ if not token:
     exit(1)
 else:
     print(f"✅ تم العثور على التوكن بطول: {len(token)} حرف")
+
+keep_alive()
 
 bot.run(token)
