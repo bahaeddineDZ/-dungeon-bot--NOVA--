@@ -655,7 +655,7 @@ if victory:
         battle_log.append(f"🎉 **النصر!** هزمت {dungeon['boss']}!")
         
         # حساب المكافآت المحسنة
-      rewards = {}
+rewards = {}
 # المكافآت الأساسية
 gold_reward = random.randint(*dungeon["rewards"]["ذهب"])
 dollar_reward = random.randint(*dungeon["rewards"]["دولار"])
