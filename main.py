@@ -11,6 +11,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands.cooldowns import CooldownMapping, BucketType
 from discord import Embed, Interaction, ButtonStyle
 from discord.ui import View, Button, Select, Modal, TextInput
+from firebase_config import db
 
 # ====== project modules ======
 from cooldown import check_cooldown, update_cooldown, format_time, load_cooldowns, DEFAULT_COOLDOWN
