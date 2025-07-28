@@ -13,6 +13,17 @@ from discord import Embed, Interaction, ButtonStyle
 from discord.ui import View, Button, Select, Modal, TextInput
 from firebase_config import db
 
+# ====== Firebase initialization ======
+try:
+    from firebase_manager import init_firebase
+    print("🔥 تهيئة Firebase...")
+    if init_firebase():
+        print("✅ تم تهيئة Firebase وإنشاء المجموعات بنجاح")
+    else:
+        print("⚠️ تحذير: مشكلة في تهيئة Firebase")
+except Exception as e:
+    print(f"⚠️ تحذير: لم يتم تحميل نظام Firebase التلقائي: {e}")
+
 # ====== project modules ======
 from cooldown import check_cooldown, update_cooldown, format_time, load_cooldowns, DEFAULT_COOLDOWN
 from data_utils import load_data, save_data, init_user
