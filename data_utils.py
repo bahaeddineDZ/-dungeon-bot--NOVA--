@@ -1,138 +1,181 @@
 
-import firebase_admin
-from firebase_admin import credentials, firestore
-import time
+import json
+import os
 from datetime import datetime
+import time
 
-# تحميل بيانات الاعتماد من ملف الخدمة
-if not firebase_admin._apps:
-    cred = credentials.Certificate("dungeon-bot--nova-firebase-adminsdk-fbsvc-f1014530c2.json")
-    firebase_admin.initialize_app(cred)
+# محاولة استيراد Firebase
+try:
+    from firebase_config import db
+    FIREBASE_AVAILABLE = db is not None
+except Exception as e:
+    print(f"تحذير: Firebase غير متاح: {e}")
+    FIREBASE_AVAILABLE = False
+    db = None
 
-# مرجع قاعدة البيانات
-db = firestore.client()
+# أسماء الملفات المحلية للنسخ الاحتياطية
+LOCAL_FILES = {
+    "users": "users.json",
+    "cooldowns": "cooldowns.json",
+    "equipment_data": "equipment_data.json",
+    "system_logs": "system_logs.json",
+    "user_tasks": "user_tasks.json",
+    "dungeon_progress": "dungeons_data.json",
+    "dungeon_cooldowns": "dungeon_cooldowns.json",
+    "shop_prices": "prices.json"
+}
 
-def ensure_collection_exists(collection_name, sample_data=None):
-    """التأكد من وجود المجموعة وإنشاؤها إذا لم تكن موجودة"""
+def load_from_file(filename, default=None):
+    """تحميل البيانات من ملف محلي"""
+    if default is None:
+        default = {}
+    
     try:
-        # فحص وجود المجموعة
-        collection_ref = db.collection(collection_name)
-        docs = collection_ref.limit(1).stream()
-        
-        # إذا لم توجد مستندات، أنشئ المجموعة بمستند تجريبي
-        if not any(docs):
-            if sample_data:
-                collection_ref.document("_init").set(sample_data)
-                # حذف المستند التجريبي بعد الإنشاء
-                collection_ref.document("_init").delete()
-            else:
-                # إنشاء مستند تجريبي فارغ لإنشاء المجموعة
-                collection_ref.document("_init").set({"created_at": datetime.now()})
-                collection_ref.document("_init").delete()
-        
-        print(f"✅ تم التأكد من وجود مجموعة: {collection_name}")
+        if os.path.exists(filename):
+            with open(filename, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"خطأ في تحميل {filename}: {e}")
+    
+    return default
+
+def save_to_file(filename, data):
+    """حفظ البيانات في ملف محلي"""
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
         return True
     except Exception as e:
-        print(f"❌ خطأ في إنشاء المجموعة {collection_name}: {e}")
+        print(f"خطأ في حفظ {filename}: {e}")
         return False
 
-def init_firebase_collections():
-    """تهيئة جميع المجموعات المطلوبة في Firebase"""
-    collections_config = {
-        "users": {
-            "user_id": {
-                "username": "مستخدم تجريبي",
-                "balance": {
-                    "دولار": 0,
-                    "ذهب": 0,
-                    "ماس": 0
-                },
-                "حقيبة": [],
-                "المهنة": "مواطن",
-                "specialization": None,
-                "level": 1,
-                "experience": 0,
-                "fish_pond": [],
-                "مزرعة": [],
-                "حوض": []
-            }
-        },
-        "system_logs": {
-            "log_id": {
-                "category": "system",
-                "user_id": "sample_user",
-                "username": "مستخدم تجريبي",
-                "action": "تسجيل تجريبي",
-                "details": {},
-                "timestamp": datetime.now().isoformat()
-            }
-        },
-        "user_tasks": {
-            "user_id": {
-                "active_tasks": [],
-                "completed_tasks": [],
-                "last_update": 0
-            }
-        },
-        "cooldowns": {
-            "user_id": {
-                "يومي": 0,
-                "عمل": 0,
-                "نهب": 0
-            }
-        },
-        "equipment_data": {
-            "user_id": {
-                "weapon": None,
-                "armor": None,
-                "helmet": None,
-                "ring": None,
-                "consumables": []
-            }
-        },
-        "dungeon_progress": {
-            "user_id": {
-                "total_victories": 0,
-                "total_defeats": 0,
-                "completed_dungeons": [],
-                "daily_attempts": {}
-            }
-        },
-        "dungeon_cooldowns": {
-            "user_id": {
-                "entry": 0,
-                "death_penalty": 0
-            }
-        },
-        "shop_prices": {
-            "item_name": {
-                "current_price": 1000,
-                "base_price": 1000,
-                "last_update": time.time(),
-                "trend": "stable"
-            }
-        }
-    }
+def load_from_firebase(collection_name, default=None):
+    """تحميل البيانات من Firebase"""
+    if not FIREBASE_AVAILABLE:
+        return default or {}
     
-    print("🔥 بدء تهيئة مجموعات Firebase...")
+    try:
+        collection_ref = db.collection(collection_name)
+        docs = collection_ref.stream()
+        
+        data = {}
+        for doc in docs:
+            data[doc.id] = doc.to_dict()
+        
+        return data
+    except Exception as e:
+        print(f"خطأ في تحميل {collection_name} من Firebase: {e}")
+        return default or {}
+
+def save_to_firebase(collection_name, data):
+    """حفظ البيانات في Firebase"""
+    if not FIREBASE_AVAILABLE:
+        return False
     
-    for collection_name, sample_data in collections_config.items():
-        ensure_collection_exists(collection_name, sample_data)
+    try:
+        collection_ref = db.collection(collection_name)
+        
+        # حفظ كل مستخدم كمستند منفصل
+        for user_id, user_data in data.items():
+            collection_ref.document(str(user_id)).set(user_data)
+        
+        return True
+    except Exception as e:
+        print(f"خطأ في حفظ {collection_name} في Firebase: {e}")
+        return False
+
+def load_data():
+    """تحميل بيانات المستخدمين من Firebase أو الملف المحلي"""
+    # محاولة تحميل من Firebase أولاً
+    if FIREBASE_AVAILABLE:
+        data = load_from_firebase("users")
+        if data:
+            # حفظ نسخة احتياطية محلية
+            save_to_file(LOCAL_FILES["users"], data)
+            return data
     
-    print("✅ تم الانتهاء من تهيئة جميع المجموعات!")
+    # في حالة فشل Firebase، استخدم الملف المحلي
+    return load_from_file(LOCAL_FILES["users"], {})
+
+def save_data(data):
+    """حفظ بيانات المستخدمين في Firebase والملف المحلي"""
+    success = False
+    
+    # حفظ في Firebase
+    if FIREBASE_AVAILABLE:
+        success = save_to_firebase("users", data)
+    
+    # حفظ نسخة احتياطية محلية دائماً
+    local_success = save_to_file(LOCAL_FILES["users"], data)
+    
+    return success or local_success
+
+def load_cooldowns():
+    """تحميل بيانات التبريد"""
+    if FIREBASE_AVAILABLE:
+        data = load_from_firebase("cooldowns")
+        if data:
+            save_to_file(LOCAL_FILES["cooldowns"], data)
+            return data
+    
+    return load_from_file(LOCAL_FILES["cooldowns"], {})
+
+def save_cooldowns(data):
+    """حفظ بيانات التبريد"""
+    success = False
+    
+    if FIREBASE_AVAILABLE:
+        success = save_to_firebase("cooldowns", data)
+    
+    local_success = save_to_file(LOCAL_FILES["cooldowns"], data)
+    return success or local_success
+
+def load_equipment_data():
+    """تحميل بيانات العتاد"""
+    if FIREBASE_AVAILABLE:
+        data = load_from_firebase("equipment_data")
+        if data:
+            save_to_file(LOCAL_FILES["equipment_data"], data)
+            return data
+    
+    return load_from_file(LOCAL_FILES["equipment_data"], {})
+
+def save_equipment_data(data):
+    """حفظ بيانات العتاد"""
+    success = False
+    
+    if FIREBASE_AVAILABLE:
+        success = save_to_firebase("equipment_data", data)
+    
+    local_success = save_to_file(LOCAL_FILES["equipment_data"], data)
+    return success or local_success
+
+def load_system_logs():
+    """تحميل سجلات النظام"""
+    if FIREBASE_AVAILABLE:
+        data = load_from_firebase("system_logs")
+        if data:
+            save_to_file(LOCAL_FILES["system_logs"], data)
+            return data
+    
+    return load_from_file(LOCAL_FILES["system_logs"], {})
+
+def save_system_logs(data):
+    """حفظ سجلات النظام"""
+    success = False
+    
+    if FIREBASE_AVAILABLE:
+        success = save_to_firebase("system_logs", data)
+    
+    local_success = save_to_file(LOCAL_FILES["system_logs"], data)
+    return success or local_success
 
 def init_user(user_id, username):
-    """تهيئة مستخدم جديد مع التأكد من وجود المجموعة"""
-    user_id = str(user_id)
+    """تهيئة مستخدم جديد"""
+    data = load_data()
     
-    # التأكد من وجود مجموعة المستخدمين
-    ensure_collection_exists("users")
-    
-    users_ref = db.collection("users")
-    doc_ref = users_ref.document(user_id)
-    
-    if not doc_ref.get().exists:
-        user_data = {
+    if str(user_id) not in data:
+        data[str(user_id)] = {
             "username": username,
             "balance": {
                 "دولار": 0,
@@ -149,159 +192,97 @@ def init_user(user_id, username):
             "حوض": [],
             "created_at": datetime.now().isoformat()
         }
-        doc_ref.set(user_data)
-        print(f"👤 تم إنشاء مستخدم جديد: {username}")
-        return user_data
-    else:
-        return doc_ref.get().to_dict()
+        save_data(data)
+    
+    return data[str(user_id)]
 
-def get_user_data(user_id):
-    """جلب بيانات مستخدم محدد"""
-    ensure_collection_exists("users")
-    doc = db.collection("users").document(str(user_id)).get()
-    return doc.to_dict() if doc.exists else None
+def ensure_collection_exists(collection_name):
+    """التأكد من وجود المجموعة"""
+    if not FIREBASE_AVAILABLE:
+        print(f"⚠️ Firebase غير متاح، تخطي إنشاء مجموعة {collection_name}")
+        return True
+    
+    try:
+        # فحص بسيط لوجود المجموعة
+        collection_ref = db.collection(collection_name)
+        docs = list(collection_ref.limit(1).stream())
+        
+        if not docs:
+            # إنشاء مستند تجريبي لإنشاء المجموعة
+            collection_ref.document("_init").set({
+                "created_at": datetime.now().isoformat(),
+                "type": "initialization"
+            })
+            # حذف المستند التجريبي
+            collection_ref.document("_init").delete()
+            print(f"✅ تم إنشاء مجموعة {collection_name}")
+        
+        return True
+    except Exception as e:
+        print(f"❌ خطأ في إنشاء مجموعة {collection_name}: {e}")
+        return False
 
-def update_user_data(user_id, data):
-    """تحديث بيانات مستخدم"""
-    ensure_collection_exists("users")
-    db.collection("users").document(str(user_id)).update(data)
+def init_all_collections():
+    """تهيئة جميع المجموعات المطلوبة"""
+    if not FIREBASE_AVAILABLE:
+        print("⚠️ Firebase غير متاح، تخطي إنشاء المجموعات")
+        return False
+    
+    collections = [
+        "users", "cooldowns", "equipment_data", 
+        "system_logs", "user_tasks", "dungeon_progress", 
+        "dungeon_cooldowns", "shop_prices"
+    ]
+    
+    success_count = 0
+    for collection in collections:
+        if ensure_collection_exists(collection):
+            success_count += 1
+    
+    print(f"✅ تم إنشاء {success_count}/{len(collections)} مجموعة بنجاح")
+    return success_count == len(collections)
 
-def save_data(data):
-    """حفظ جميع بيانات المستخدمين (للتوافق مع النظام القديم)"""
-    ensure_collection_exists("users")
+def sync_local_to_firebase():
+    """مزامنة البيانات المحلية إلى Firebase"""
+    if not FIREBASE_AVAILABLE:
+        print("⚠️ Firebase غير متاح للمزامنة")
+        return False
     
-    for user_id, user_data in data.items():
-        db.collection("users").document(str(user_id)).set(user_data, merge=True)
+    print("🔄 بدء مزامنة البيانات المحلية إلى Firebase...")
+    
+    synced = 0
+    for collection_name, filename in LOCAL_FILES.items():
+        if os.path.exists(filename):
+            try:
+                data = load_from_file(filename)
+                if data and save_to_firebase(collection_name, data):
+                    synced += 1
+                    print(f"✅ تم مزامنة {collection_name}")
+                else:
+                    print(f"❌ فشل في مزامنة {collection_name}")
+            except Exception as e:
+                print(f"❌ خطأ في مزامنة {collection_name}: {e}")
+    
+    print(f"🔄 تم مزامنة {synced}/{len(LOCAL_FILES)} ملف")
+    return synced > 0
 
-def load_data():
-    """تحميل جميع بيانات المستخدمين (للتوافق مع النظام القديم)"""
-    ensure_collection_exists("users")
+def backup_firebase_to_local():
+    """نسخ احتياطي من Firebase إلى الملفات المحلية"""
+    if not FIREBASE_AVAILABLE:
+        print("⚠️ Firebase غير متاح للنسخ الاحتياطي")
+        return False
     
-    users_ref = db.collection("users")
-    docs = users_ref.stream()
+    print("💾 بدء النسخ الاحتياطي من Firebase...")
     
-    data = {}
-    for doc in docs:
-        data[doc.id] = doc.to_dict()
+    backed_up = 0
+    for collection_name, filename in LOCAL_FILES.items():
+        try:
+            data = load_from_firebase(collection_name)
+            if data and save_to_file(filename, data):
+                backed_up += 1
+                print(f"✅ تم نسخ {collection_name}")
+        except Exception as e:
+            print(f"❌ خطأ في نسخ {collection_name}: {e}")
     
-    return data
-
-def save_log(category, user_id, username, action, details):
-    """حفظ سجل النشاط في Firebase"""
-    ensure_collection_exists("system_logs")
-    
-    log_data = {
-        "category": category,
-        "user_id": str(user_id),
-        "username": username,
-        "action": action,
-        "details": details,
-        "timestamp": datetime.now().isoformat()
-    }
-    
-    db.collection("system_logs").add(log_data)
-
-def get_logs(category=None, user_id=None, limit=50):
-    """جلب السجلات من Firebase"""
-    ensure_collection_exists("system_logs")
-    
-    logs_ref = db.collection("system_logs")
-    
-    if category:
-        logs_ref = logs_ref.where("category", "==", category)
-    
-    if user_id:
-        logs_ref = logs_ref.where("user_id", "==", str(user_id))
-    
-    logs_ref = logs_ref.order_by("timestamp", direction=firestore.Query.DESCENDING).limit(limit)
-    
-    logs = []
-    for doc in logs_ref.stream():
-        log_data = doc.to_dict()
-        log_data["id"] = doc.id
-        logs.append(log_data)
-    
-    return logs
-
-def save_user_tasks(user_id, tasks_data):
-    """حفظ مهام المستخدم في Firebase"""
-    ensure_collection_exists("user_tasks")
-    
-    db.collection("user_tasks").document(str(user_id)).set(tasks_data, merge=True)
-
-def load_user_tasks(user_id):
-    """تحميل مهام المستخدم من Firebase"""
-    ensure_collection_exists("user_tasks")
-    
-    doc = db.collection("user_tasks").document(str(user_id)).get()
-    if doc.exists:
-        return doc.to_dict()
-    else:
-        # إنشاء مهام فارغة للمستخدم الجديد
-        empty_tasks = {"active_tasks": [], "completed_tasks": [], "last_update": 0}
-        save_user_tasks(user_id, empty_tasks)
-        return empty_tasks
-
-def save_cooldowns(user_id, cooldowns_data):
-    """حفظ أوقات التبريد في Firebase"""
-    ensure_collection_exists("cooldowns")
-    
-    db.collection("cooldowns").document(str(user_id)).set(cooldowns_data, merge=True)
-
-def load_cooldowns():
-    """تحميل جميع أوقات التبريد من Firebase"""
-    ensure_collection_exists("cooldowns")
-    
-    cooldowns_ref = db.collection("cooldowns")
-    docs = cooldowns_ref.stream()
-    
-    data = {}
-    for doc in docs:
-        data[doc.id] = doc.to_dict()
-    
-    return data
-
-def save_equipment_data(user_id, equipment_data):
-    """حفظ بيانات العتاد في Firebase"""
-    ensure_collection_exists("equipment_data")
-    
-    db.collection("equipment_data").document(str(user_id)).set(equipment_data, merge=True)
-
-def load_equipment_data():
-    """تحميل جميع بيانات العتاد من Firebase"""
-    ensure_collection_exists("equipment_data")
-    
-    equipment_ref = db.collection("equipment_data")
-    docs = equipment_ref.stream()
-    
-    data = {}
-    for doc in docs:
-        data[doc.id] = doc.to_dict()
-    
-    return data
-
-def save_shop_prices(prices_data):
-    """حفظ أسعار المتجر في Firebase"""
-    ensure_collection_exists("shop_prices")
-    
-    for item_name, price_info in prices_data.items():
-        db.collection("shop_prices").document(item_name).set(price_info, merge=True)
-
-def load_shop_prices():
-    """تحميل أسعار المتجر من Firebase"""
-    ensure_collection_exists("shop_prices")
-    
-    prices_ref = db.collection("shop_prices")
-    docs = prices_ref.stream()
-    
-    data = {}
-    for doc in docs:
-        data[doc.id] = doc.to_dict()
-    
-    return data
-
-# تهيئة المجموعات عند تحميل الوحدة
-try:
-    init_firebase_collections()
-except Exception as e:
-    print(f"⚠️ تحذير: لم يتم تهيئة Firebase بالكامل: {e}")
+    print(f"💾 تم نسخ {backed_up}/{len(LOCAL_FILES)} مجموعة")
+    return backed_up > 0

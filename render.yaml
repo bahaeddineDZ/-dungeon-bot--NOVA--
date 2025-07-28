@@ -1,9 +1,13 @@
+
 services:
-  - type: worker
-    name: discord-bot
+  - type: web
+    name: discord-bot-nova
     env: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: python main.py
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
     envVars:
       - key: DISCORD_TOKEN
         sync: false
+      - key: FIREBASE_CREDENTIAL
+        sync: false
+    autoDeploy: false

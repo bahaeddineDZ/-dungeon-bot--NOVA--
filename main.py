@@ -15,14 +15,46 @@ from firebase_config import db
 
 # ====== Firebase initialization ======
 try:
-    from firebase_manager import init_firebase
-    print("🔥 تهيئة Firebase...")
-    if init_firebase():
-        print("✅ تم تهيئة Firebase وإنشاء المجموعات بنجاح")
+    from data_utils import init_all_collections, FIREBASE_AVAILABLE
+    print("🔥 فحص حالة Firebase...")
+    if FIREBASE_AVAILABLE:
+        print("✅ Firebase متصل بنجاح")
+        # محاولة تهيئة المجموعات مع timeout محدود
+        try:
+            print("📁 بدء تهيئة المجموعات...")
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("انتهت مهلة تهيئة Firebase")
+            
+            # تعيين timeout لمدة 30 ثانية
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(30)
+            
+            try:
+                init_all_collections()
+                signal.alarm(0)  # إلغاء التوقيت
+                print("✅ تم تهيئة جميع المجموعات بنجاح")
+            except TimeoutError:
+                print("⚠️ انتهت مهلة تهيئة المجموعات - سيتم المتابعة بدونها")
+                signal.alarm(0)
+            except Exception as e:
+                signal.alarm(0)
+                print(f"⚠️ تحذير في تهيئة المجموعات: {e}")
+                print("💡 البوت سيعمل بدون تهيئة المجموعات")
+        except ImportError:
+            # signal غير متاح في بعض البيئات
+            try:
+                init_all_collections()
+                print("✅ تم تهيئة جميع المجموعات بنجاح")
+            except Exception as e:
+                print(f"⚠️ تحذير في تهيئة المجموعات: {e}")
     else:
-        print("⚠️ تحذير: مشكلة في تهيئة Firebase")
+        print("⚠️ Firebase غير متاح - سيتم استخدام الملفات المحلية")
+        print("💡 البوت سيعمل بشكل طبيعي مع حفظ البيانات محلياً")
 except Exception as e:
-    print(f"⚠️ تحذير: لم يتم تحميل نظام Firebase التلقائي: {e}")
+    print(f"⚠️ تحذير: خطأ في نظام البيانات: {e}")
+    print("🔄 البوت سيتابع العمل في الوضع الآمن")
 
 # ====== project modules ======
 from cooldown import check_cooldown, update_cooldown, format_time, load_cooldowns, DEFAULT_COOLDOWN
