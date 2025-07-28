@@ -1,30 +1,21 @@
-import json
-import os
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-DATA_FILE = "users.json"
+# تحميل بيانات الاعتماد من ملف الخدمة
+if not firebase_admin._apps:
+    cred = credentials.Certificate("serviceAccountKey.json")
+    firebase_admin.initialize_app(cred)
 
-def load_data():
-    """تحميل بيانات المستخدمين"""
-    if not os.path.exists(DATA_FILE):
-        return {}
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
-        return {}
-
-def save_data(data):
-    """حفظ بيانات المستخدمين"""
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+# مرجع قاعدة البيانات
+db = firestore.client()
+users_ref = db.collection("users")
 
 def init_user(user_id, username):
     """تهيئة مستخدم جديد"""
-    data = load_data()
     user_id = str(user_id)
-
-    if user_id not in data:
-        data[user_id] = {
+    doc_ref = users_ref.document(user_id)
+    if not doc_ref.get().exists:
+        user_data = {
             "username": username,
             "balance": {
                 "دولار": 0,
@@ -40,17 +31,16 @@ def init_user(user_id, username):
             "مزرعة": [],
             "حوض": []
         }
-        save_data(data)
-
-    return data[user_id]
+        doc_ref.set(user_data)
+        return user_data
+    else:
+        return doc_ref.get().to_dict()
 
 def get_user_data(user_id):
     """جلب بيانات مستخدم محدد"""
-    data = load_data()
-    return data.get(str(user_id))
+    doc = users_ref.document(str(user_id)).get()
+    return doc.to_dict() if doc.exists else None
 
 def update_user_data(user_id, user_data):
     """تحديث بيانات مستخدم محدد"""
-    data = load_data()
-    data[str(user_id)] = user_data
-    save_data(data)
+    users_ref.document(str(user_id)).set(user_data, merge=True)
