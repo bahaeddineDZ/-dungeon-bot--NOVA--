@@ -29,7 +29,6 @@ from cooldown import check_cooldown, update_cooldown, format_time, load_cooldown
 from data_utils import load_data, save_data, init_user
 from logs_system import logs_system, LeaderboardView, LogsView
 from tasks_system import tasks_system
-from keep_alive import keep_alive
 from dungeons_system import *
 from help_system import setup_advanced_help
 
@@ -70,7 +69,6 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="", intents=intents)
 
 # ====== start services ======
-keep_alive()
 
 # ====== setup advanced help system ======
 advanced_help_system = None
